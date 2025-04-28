@@ -4,7 +4,7 @@ import os
 import logging
 import pandas as pd
 from datetime import datetime
-from proc_withLabels import process_file
+from code.variance import process_file
 
 logging.basicConfig(level=logging.DEBUG)
 
