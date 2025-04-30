@@ -33,7 +33,7 @@ import pandas as pd
 np.random.seed(42)
 
 num_features = 20
-num_points = 128
+num_points = 20
 
 # Generate random features with normal distribution, clipped between 0 and 1
 X = np.clip(0.5 + 0.15 * np.random.randn(num_points, num_features), 0, 1)
