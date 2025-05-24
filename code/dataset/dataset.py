@@ -32,14 +32,14 @@ import pandas as pd
 
 np.random.seed(42)
 
-num_features = 20
-num_points = 20
+num_features = 30
+num_points = 100
 
 # Generate random features with normal distribution, clipped between 0 and 1
 X = np.clip(0.5 + 0.15 * np.random.randn(num_points, num_features), 0, 1)
 
 # Generate random labels between 0 and 4
-y = np.random.randint(0, 4, size=(num_points, 1))
+y = np.random.randint(0, 1, size=(num_points, 1))
 
 # Combine features and labels
 data = np.hstack((X, y))
@@ -49,4 +49,4 @@ df = pd.DataFrame(data, columns=columns)
 
 print(df.head())
 
-df.to_csv("synthetic_dataset.csv", index=False)
+df.to_csv("128_50_2.csv", index=False)

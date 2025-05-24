@@ -2,10 +2,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import * as d3 from "d3";
 import HierarchicalGraph from "./JsonDisplay";
-// import HierarchicalGraph from "./GraphBase";
 import ScatterPlot from "./ScatterPlot";
 import ParallelCoordinates from "./ParallelCoordinates";
 import HorizontalStrip from "./strip";
+import MatrixPage from "./Matrix";
+import { useNavigate } from "react-router-dom";
 
 const App = () => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -21,6 +22,7 @@ const App = () => {
   const legendRef = useRef(null);
   const subspaceLegendRef = useRef(null);
   const containerRef = useRef(null);
+  const navigate = useNavigate();
 
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
@@ -168,16 +170,26 @@ const App = () => {
     }, {});
     setRingVisibility(newVisibility);
   };
+  const goToNextPage = () => {
+    navigate("/MatrixPage");
+  };
 
   return (
+    
     <div
       ref={containerRef}
       className="min-h-screen bg-gray-100 p-2 sm:p-4 flex flex-col gap-4"
     >
+     
       {/* Main Layout */}
       <div className="flex flex-col lg:flex-row gap-4 w-full">
+   
         {/* Left Dashboard */}
         <div className="w-full lg:w-1/4 p-4 bg-white shadow rounded-lg min-w-[250px]">
+          <button
+            onClick={goToNextPage}
+            className="bg-blue-500 text-white px-16 py-4 rounded mt-4"
+          />
           <h1 className="text-lg sm:text-xl font-bold mb-4">File Upload</h1>
           <div className="mb-4">
             <input
