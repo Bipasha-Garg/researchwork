@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import * as d3 from "d3";
-import MatrixStripVisualization from "./matrix_strip";
+import MatrixStripVisualization from "./extras/matrix_strip";
 
 const MatrixPage = () => {
     const [selectedFile, setSelectedFile] = useState(null);

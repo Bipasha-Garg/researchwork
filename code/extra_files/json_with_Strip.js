@@ -463,250 +463,250 @@ const HierarchicalGraph = ({ jsonData, labelsData, setHoveredCoordinates, ringVi
         svg.call(zoom);
 
         // Create linear strips for all rings
-        // renderAllLinearStrips();
+        renderAllLinearStrips();
 
-        // function renderAllLinearStrips() {
-        //     // Clear previous strips
-        //     const stripsContainer = d3.select(stripsContainerRef.current);
-        //     stripsContainer.selectAll("*").remove();
+        function renderAllLinearStrips() {
+            // Clear previous strips
+            const stripsContainer = d3.select(stripsContainerRef.current);
+            stripsContainer.selectAll("*").remove();
 
-        //     // Create a strip for each visible ring
-        //     subspaces.forEach((key, ringIndex) => {
-        //         if (!ringVisibility[key]) return;
+            // Create a strip for each visible ring
+            subspaces.forEach((key, ringIndex) => {
+                if (!ringVisibility[key]) return;
 
-        //         createStripForRing(ringIndex, key);
-        //     });
-        // }
+                createStripForRing(ringIndex, key);
+            });
+        }
 
-        // function createStripForRing(ringIndex, ringKey) {
-        //     const stripWidth = 1100;
-        //     const stripHeight = 150;
-        //     const stripMargin = { top: 20, right: 20, bottom: 30, left: 20 };
+        function createStripForRing(ringIndex, ringKey) {
+            const stripWidth = 1100;
+            const stripHeight = 150;
+            const stripMargin = { top: 20, right: 20, bottom: 30, left: 20 };
 
-        //     const stripsContainer = d3.select(stripsContainerRef.current);
+            const stripsContainer = d3.select(stripsContainerRef.current);
 
-        //     // Create a container div for this strip
-        //     const stripContainer = stripsContainer
-        //         .append("div")
-        //         .attr("class", "strip-container")
-        //         .style("margin-bottom", "20px")
-        //         .style("position", "relative");
+            // Create a container div for this strip
+            const stripContainer = stripsContainer
+                .append("div")
+                .attr("class", "strip-container")
+                .style("margin-bottom", "20px")
+                .style("position", "relative");
 
-        //     // Add a title for the strip
-        //     stripContainer
-        //         .append("h3")
-        //         .style("margin", "0 0 5px 0")
-        //         .style("font-size", "16px")
-        //         .style("font-weight", "bold")
-        //         .text(`Ring ${ringLabels[ringIndex]} (${ringKey}) - ${viewMode.charAt(0).toUpperCase() + viewMode.slice(1)} View`);
+            // Add a title for the strip
+            stripContainer
+                .append("h3")
+                .style("margin", "0 0 5px 0")
+                .style("font-size", "16px")
+                .style("font-weight", "bold")
+                .text(`Ring ${ringLabels[ringIndex]} (${ringKey}) - ${viewMode.charAt(0).toUpperCase() + viewMode.slice(1)} View`);
 
-        //     // Create a div with horizontal scrolling for the strip
-        //     const stripScrollContainer = stripContainer
-        //         .append("div")
-        //         .style("width", "100%")
-        //         .style("overflow-x", "auto")
-        //         .style("overflow-y", "hidden")
-        //         .style("padding-bottom", "5px") // Add padding to show scrollbar
-        //         .style("border", "1px solid #eee")
-        //         .style("border-radius", "4px");
+            // Create a div with horizontal scrolling for the strip
+            const stripScrollContainer = stripContainer
+                .append("div")
+                .style("width", "100%")
+                .style("overflow-x", "auto")
+                .style("overflow-y", "hidden")
+                .style("padding-bottom", "5px") // Add padding to show scrollbar
+                .style("border", "1px solid #eee")
+                .style("border-radius", "4px");
 
-        //     // Create the SVG for this strip
-        //     const strip = stripScrollContainer
-        //         .append("svg")
-        //         .attr("width", stripWidth)
-        //         .attr("height", stripHeight);
+            // Create the SVG for this strip
+            const strip = stripScrollContainer
+                .append("svg")
+                .attr("width", stripWidth)
+                .attr("height", stripHeight);
 
-        //     const stripG = strip
-        //         .append("g")
-        //         .attr("transform", `translate(${stripMargin.left}, ${stripMargin.top})`);
+            const stripG = strip
+                .append("g")
+                .attr("transform", `translate(${stripMargin.left}, ${stripMargin.top})`);
 
-        //     const sectors = 2 ** (ringIndex + 1);
-        //     const availableHeight = stripHeight - stripMargin.top - stripMargin.bottom;
-        //     const availableWidth = stripWidth - stripMargin.left - stripMargin.right;
+            const sectors = 2 ** (ringIndex + 1);
+            const availableHeight = stripHeight - stripMargin.top - stripMargin.bottom;
+            const availableWidth = stripWidth - stripMargin.left - stripMargin.right;
 
-        //     // Group points by sector
-        //     const pointsBySector = {};
-        //     pointsData[ringIndex].points.forEach(point => {
-        //         const pointData = Object.entries(point).filter(([key]) => key !== "Point_ID");
-        //         const bitVector = pointData.map(([_, coord]) => (coord >= 0 ? 1 : 0)).join("");
-        //         const sectorIndex = Math.min(parseInt(bitVector, 2), sectors - 1);
+            // Group points by sector
+            const pointsBySector = {};
+            pointsData[ringIndex].points.forEach(point => {
+                const pointData = Object.entries(point).filter(([key]) => key !== "Point_ID");
+                const bitVector = pointData.map(([_, coord]) => (coord >= 0 ? 1 : 0)).join("");
+                const sectorIndex = Math.min(parseInt(bitVector, 2), sectors - 1);
 
-        //         if (!pointsBySector[sectorIndex]) {
-        //             pointsBySector[sectorIndex] = [];
-        //         }
-        //         pointsBySector[sectorIndex].push(point);
-        //     });
+                if (!pointsBySector[sectorIndex]) {
+                    pointsBySector[sectorIndex] = [];
+                }
+                pointsBySector[sectorIndex].push(point);
+            });
 
-        //     // Filter sectors based on showEmptySectors setting
-        //     const sectorsToShow = showEmptySectors ?
-        //         Array.from({ length: sectors }, (_, i) => i) :
-        //         Array.from({ length: sectors }, (_, i) => i).filter(i => pointsBySector[i] && pointsBySector[i].length > 0);
+            // Filter sectors based on showEmptySectors setting
+            const sectorsToShow = showEmptySectors ?
+                Array.from({ length: sectors }, (_, i) => i) :
+                Array.from({ length: sectors }, (_, i) => i).filter(i => pointsBySector[i] && pointsBySector[i].length > 0);
 
-        //     // Calculate sector widths based on view mode
-        //     let sectorStartPositions = [];
-        //     let actualSectorWidth = availableWidth / sectorsToShow.length;
+            // Calculate sector widths based on view mode
+            let sectorStartPositions = [];
+            let actualSectorWidth = availableWidth / sectorsToShow.length;
 
-        //     if (viewMode === "normal") {
-        //         // Uniform sector widths
-        //         sectorStartPositions = sectorsToShow.map((_, i) => i * actualSectorWidth);
-        //     } else if (viewMode === "proportional") {
-        //         // Proportional sector widths based on number of points
-        //         const totalPoints = pointsData[ringIndex].points.length || 1;
-        //         const minSectorWidth = 20; // Minimum width for empty sectors
+            if (viewMode === "normal") {
+                // Uniform sector widths
+                sectorStartPositions = sectorsToShow.map((_, i) => i * actualSectorWidth);
+            } else if (viewMode === "proportional") {
+                // Proportional sector widths based on number of points
+                const totalPoints = pointsData[ringIndex].points.length || 1;
+                const minSectorWidth = 20; // Minimum width for empty sectors
 
-        //         // Calculate proportional widths for visible sectors only
-        //         let totalNonEmptyWidth = 0;
-        //         let emptyCount = 0;
+                // Calculate proportional widths for visible sectors only
+                let totalNonEmptyWidth = 0;
+                let emptyCount = 0;
 
-        //         const sectorCounts = [];
-        //         sectorsToShow.forEach(sectorIndex => {
-        //             const count = pointsBySector[sectorIndex] ? pointsBySector[sectorIndex].length : 0;
-        //             sectorCounts.push(count);
-        //             if (count > 0) {
-        //                 totalNonEmptyWidth += count;
-        //             } else {
-        //                 emptyCount++;
-        //             }
-        //         });
+                const sectorCounts = [];
+                sectorsToShow.forEach(sectorIndex => {
+                    const count = pointsBySector[sectorIndex] ? pointsBySector[sectorIndex].length : 0;
+                    sectorCounts.push(count);
+                    if (count > 0) {
+                        totalNonEmptyWidth += count;
+                    } else {
+                        emptyCount++;
+                    }
+                });
 
-        //         const availableForNonEmpty = availableWidth - (emptyCount * minSectorWidth);
-        //         let currentX = 0;
+                const availableForNonEmpty = availableWidth - (emptyCount * minSectorWidth);
+                let currentX = 0;
 
-        //         sectorStartPositions = [];
-        //         sectorCounts.forEach(count => {
-        //             sectorStartPositions.push(currentX);
-        //             const width = count === 0 ? minSectorWidth : (count / totalNonEmptyWidth) * availableForNonEmpty;
-        //             currentX += width;
-        //         });
-        //     }
+                sectorStartPositions = [];
+                sectorCounts.forEach(count => {
+                    sectorStartPositions.push(currentX);
+                    const width = count === 0 ? minSectorWidth : (count / totalNonEmptyWidth) * availableForNonEmpty;
+                    currentX += width;
+                });
+            }
 
-        //     // Draw sectors in the strip
-        //     sectorsToShow.forEach((originalSectorIndex, displayIndex) => {
-        //         const sectorX = sectorStartPositions[displayIndex];
-        //         const nextX = displayIndex < sectorsToShow.length - 1 ?
-        //             sectorStartPositions[displayIndex + 1] :
-        //             availableWidth;
-        //         const sectorWidth = nextX - sectorX;
+            // Draw sectors in the strip
+            sectorsToShow.forEach((originalSectorIndex, displayIndex) => {
+                const sectorX = sectorStartPositions[displayIndex];
+                const nextX = displayIndex < sectorsToShow.length - 1 ?
+                    sectorStartPositions[displayIndex + 1] :
+                    availableWidth;
+                const sectorWidth = nextX - sectorX;
 
-        //         // Draw sector background
-        //         stripG.append("rect")
-        //             .attr("x", sectorX)
-        //             .attr("y", 0)
-        //             .attr("width", sectorWidth)
-        //             .attr("height", availableHeight)
-        //             .attr("fill", getSectorColor(ringIndex, originalSectorIndex))
-        //             .attr("fill-opacity", 0.3)
-        //             .attr("stroke", "black")
-        //             .attr("stroke-width", 0.5);
+                // Draw sector background
+                stripG.append("rect")
+                    .attr("x", sectorX)
+                    .attr("y", 0)
+                    .attr("width", sectorWidth)
+                    .attr("height", availableHeight)
+                    .attr("fill", getSectorColor(ringIndex, originalSectorIndex))
+                    .attr("fill-opacity", 0.3)
+                    .attr("stroke", "black")
+                    .attr("stroke-width", 0.5);
 
-        //         const sectorPoints = pointsBySector[originalSectorIndex] || [];
-        //         const numPoints = sectorPoints.length;
+                const sectorPoints = pointsBySector[originalSectorIndex] || [];
+                const numPoints = sectorPoints.length;
 
-        //         if (numPoints > 0) {
-        //             // Calculate min and max values for this sector
-        //             const values = sectorPoints.map(point => {
-        //                 const coords = Object.entries(point).filter(([key]) => key !== "Point_ID");
-        //                 return coords.reduce((sum, [_, coord]) => sum + Math.abs(coord), 0) / coords.length;
-        //             });
+                if (numPoints > 0) {
+                    // Calculate min and max values for this sector
+                    const values = sectorPoints.map(point => {
+                        const coords = Object.entries(point).filter(([key]) => key !== "Point_ID");
+                        return coords.reduce((sum, [_, coord]) => sum + Math.abs(coord), 0) / coords.length;
+                    });
 
-        //             const minValue = Math.min(...values);
-        //             const maxValue = Math.max(...values);
-        //             const valueRange = maxValue - minValue || 1; // Avoid division by zero
+                    const minValue = Math.min(...values);
+                    const maxValue = Math.max(...values);
+                    const valueRange = maxValue - minValue || 1; // Avoid division by zero
 
-        //             // Draw horizontal lines for each point
-        //             const lineSpacing = availableHeight / (numPoints + 1);
+                    // Draw horizontal lines for each point
+                    const lineSpacing = availableHeight / (numPoints + 1);
 
-        //             sectorPoints.forEach((point, j) => {
-        //                 const y = (j + 1) * lineSpacing;
+                    sectorPoints.forEach((point, j) => {
+                        const y = (j + 1) * lineSpacing;
 
-        //                 // Draw the horizontal line
-        //                 stripG.append("line")
-        //                     .attr("x1", sectorX)
-        //                     .attr("y1", y)
-        //                     .attr("x2", sectorX + sectorWidth)
-        //                     .attr("y2", y)
-        //                     .attr("stroke", "#ddd")
-        //                     .attr("stroke-width", 1);
+                        // Draw the horizontal line
+                        stripG.append("line")
+                            .attr("x1", sectorX)
+                            .attr("y1", y)
+                            .attr("x2", sectorX + sectorWidth)
+                            .attr("y2", y)
+                            .attr("stroke", "#ddd")
+                            .attr("stroke-width", 1);
 
-        //                 // Calculate point position based on its value
-        //                 const coords = Object.entries(point).filter(([key]) => key !== "Point_ID");
-        //                 const value = coords.reduce((sum, [_, coord]) => sum + Math.abs(coord), 0) / coords.length;
-        //                 const normalizedValue = (value - minValue) / valueRange;
-        //                 const x = sectorX + normalizedValue * sectorWidth;
+                        // Calculate point position based on its value
+                        const coords = Object.entries(point).filter(([key]) => key !== "Point_ID");
+                        const value = coords.reduce((sum, [_, coord]) => sum + Math.abs(coord), 0) / coords.length;
+                        const normalizedValue = (value - minValue) / valueRange;
+                        const x = sectorX + normalizedValue * sectorWidth;
 
-        //                 // Draw the point
-        //                 stripG.append("circle")
-        //                     .attr("cx", x)
-        //                     .attr("cy", y)
-        //                     .attr("r", 3)
-        //                     .attr("fill", "black")
-        //                     .attr("stroke", "white")
-        //                     .attr("stroke-width", 0.5)
-        //                     .style("cursor", "pointer")
-        //                     .on("mouseover", (event) => {
-        //                         const pointIds = point.Point_ID.join(", ");
-        //                         let associatedLabels = [];
-        //                         if (labelsData && labelsData.labels) {
-        //                             Object.entries(labelsData.labels).forEach(([label, pointList]) => {
-        //                                 if (point.Point_ID.some(id => pointList.includes(Number(id)))) {
-        //                                     associatedLabels.push(label);
-        //                                 }
-        //                             });
-        //                         }
-        //                         const labelText = associatedLabels.length > 0 ? associatedLabels.join(", ") : "No Label";
+                        // Draw the point
+                        stripG.append("circle")
+                            .attr("cx", x)
+                            .attr("cy", y)
+                            .attr("r", 3)
+                            .attr("fill", "black")
+                            .attr("stroke", "white")
+                            .attr("stroke-width", 0.5)
+                            .style("cursor", "pointer")
+                            .on("mouseover", (event) => {
+                                const pointIds = point.Point_ID.join(", ");
+                                let associatedLabels = [];
+                                if (labelsData && labelsData.labels) {
+                                    Object.entries(labelsData.labels).forEach(([label, pointList]) => {
+                                        if (point.Point_ID.some(id => pointList.includes(Number(id)))) {
+                                            associatedLabels.push(label);
+                                        }
+                                    });
+                                }
+                                const labelText = associatedLabels.length > 0 ? associatedLabels.join(", ") : "No Label";
 
-        //                         tooltip
-        //                             .style("visibility", "visible")
-        //                             .html(
-        //                                 `Point_IDs: ${pointIds}<br>Value: ${value.toFixed(2)}<br>Sector: ${originalSectorIndex}<br>Label: ${labelText}`
-        //                             );
-        //                         setHoveredCoordinates({ ...point, label: labelText });
-        //                     })
-        //                     .on("mousemove", (event) => {
-        //                         tooltip
-        //                             .style("top", event.pageY + 10 + "px")
-        //                             .style("left", event.pageX + 10 + "px");
-        //                     })
-        //                     .on("mouseout", () => {
-        //                         tooltip.style("visibility", "hidden");
-        //                         setHoveredCoordinates(null);
-        //                     });
-        //             });
-        //         }
+                                tooltip
+                                    .style("visibility", "visible")
+                                    .html(
+                                        `Point_IDs: ${pointIds}<br>Value: ${value.toFixed(2)}<br>Sector: ${originalSectorIndex}<br>Label: ${labelText}`
+                                    );
+                                setHoveredCoordinates({ ...point, label: labelText });
+                            })
+                            .on("mousemove", (event) => {
+                                tooltip
+                                    .style("top", event.pageY + 10 + "px")
+                                    .style("left", event.pageX + 10 + "px");
+                            })
+                            .on("mouseout", () => {
+                                tooltip.style("visibility", "hidden");
+                                setHoveredCoordinates(null);
+                            });
+                    });
+                }
 
-        //         // Add sector label
-        //         stripG.append("text")
-        //             .attr("x", sectorX + sectorWidth / 2)
-        //             .attr("y", availableHeight + 15)
-        //             .attr("text-anchor", "middle")
-        //             .attr("font-size", "10px")
-        //             .text(`S${originalSectorIndex}`);
-        //     });
+                // Add sector label
+                stripG.append("text")
+                    .attr("x", sectorX + sectorWidth / 2)
+                    .attr("y", availableHeight + 15)
+                    .attr("text-anchor", "middle")
+                    .attr("font-size", "10px")
+                    .text(`S${originalSectorIndex}`);
+            });
 
-        //     // Add scroll indicator if needed
-        //     if (stripWidth > window.innerWidth - 50) {
-        //         // Add subtle scroll arrows and indicator
-        //         const scrollIndicator = stripContainer
-        //             .append("div")
-        //             .style("display", "flex")
-        //             .style("justify-content", "center")
-        //             .style("align-items", "center")
-        //             .style("margin-top", "4px")
-        //             .style("color", "#666")
-        //             .style("font-size", "12px");
+            // Add scroll indicator if needed
+            if (stripWidth > window.innerWidth - 50) {
+                // Add subtle scroll arrows and indicator
+                const scrollIndicator = stripContainer
+                    .append("div")
+                    .style("display", "flex")
+                    .style("justify-content", "center")
+                    .style("align-items", "center")
+                    .style("margin-top", "4px")
+                    .style("color", "#666")
+                    .style("font-size", "12px");
 
-        //         scrollIndicator.append("span")
-        //             .html("&#8592;") // Left arrow
-        //             .style("margin-right", "5px");
+                scrollIndicator.append("span")
+                    .html("&#8592;") // Left arrow
+                    .style("margin-right", "5px");
 
-        //         scrollIndicator.append("span")
-        //             .text("Scroll to see all sectors");
+                scrollIndicator.append("span")
+                    .text("Scroll to see all sectors");
 
-        //         scrollIndicator.append("span")
-        //             .html("&#8594;") // Right arrow
-        //             .style("margin-left", "5px");
-        //     }
-        // }
+                scrollIndicator.append("span")
+                    .html("&#8594;") // Right arrow
+                    .style("margin-left", "5px");
+            }
+        }
 
         return () => {
             tooltip.remove();

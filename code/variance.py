@@ -40,6 +40,8 @@ def preprocess_csv(file_path, output_file):
             raise ValueError("The dataset must have at least one numerical column.")
 
         variances = df[numeric_columns].var().sort_values().index.tolist()
+        # variances = df[numeric_columns].var().sort_values(ascending=False).index.tolist()
+
 
         scaler = MinMaxScaler(feature_range=(-1, 1))
         df[numeric_columns] = scaler.fit_transform(df[numeric_columns])

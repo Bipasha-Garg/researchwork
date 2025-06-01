@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import * as d3 from "d3";
-import HierarchicalGraph from "./JsonDisplay";
-import ScatterPlot from "./ScatterPlot";
-import ParallelCoordinates from "./ParallelCoordinates";
-import HorizontalStrip from "./strip";
-import MatrixPage from "./Matrix";
+import HierarchicalGraph from "./ModularA";
+// import ScatterPlot from "./extras/ScatterPlot";
+// import ParallelCoordinates from "./extras/ParallelCoordinates";
+// import HorizontalStrip from "./extras/strip";
+// import MatrixPage from "./Matrix";
 import { useNavigate } from "react-router-dom";
 
 const App = () => {
