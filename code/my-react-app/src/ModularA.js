@@ -1,841 +1,3 @@
-// import React, { useEffect, useRef, useState, useCallback } from "react";
-// import * as d3 from "d3";
-// import {
-//     CoordinateTransforms,
-//     transformCoordinates,
-//     calculateSectorPointCounts,
-//     calculateProportionalSectorAngles,
-//     generateRingStructure,
-//     generateColorSchemes,
-//     calculatePointPositions,
-// } from "./ModularB";
-
-
-// const HierarchicalGraph = ({
-//     jsonData,
-//     labelsData,
-//     setHoveredCoordinates,
-//     ringVisibility
-// }) => {
-//     const graphRef = useRef(null);
-//     const stripsContainerRef = useRef(null);
-//     const [viewMode, setViewMode] = useState("normal");
-//     const [showEmptySectors, setShowEmptySectors] = useState(true);
-//     const [transformStrategy, setTransformStrategy] = useState(CoordinateTransforms.POSITIVE_NEGATIVE);
-//     const [transformOptions, setTransformOptions] = useState({
-//         threshold: 0,
-//         percentile: 50,
-//         maxDepth: 4, // DT
-//         minSamplesLeaf: 3, // DT
-//         minSamplesSplit: 5, // DT
-//     });
-
-//     const [selectedPoints, setSelectedPoints] = useState(new Set());
-//     const [highlightConnections, setHighlightConnections] = useState(true);
-//     const [animationEnabled, setAnimationEnabled] = useState(false);
-//     const [zoomLevel, setZoomLevel] = useState(1);
-//     const [decisionTreeFullData, setDecisionTreeFullData] = useState(null); // DT
-
-//     // Memoized validation and rendering
-//     const isValidData = useCallback(() => {
-//         return jsonData &&
-//             typeof jsonData === "object" &&
-//             Object.keys(jsonData).length > 0 &&
-//             labelsData &&
-//             typeof labelsData === "object";
-//     }, [jsonData, labelsData]);
-
-//     useEffect(() => {
-//         if (!isValidData()) {
-//             console.error("Invalid data provided:", { jsonData, labelsData });
-//             return;
-//         }
-//         const cleanup = renderVisualization();
-//         return cleanup;
-//     }, [
-//         jsonData,
-//         labelsData,
-//         ringVisibility,
-//         viewMode,
-//         showEmptySectors,
-//         transformStrategy,
-//         transformOptions,
-//         selectedPoints,
-//         highlightConnections,
-//         animationEnabled
-//     ]);
-
-//     const renderVisualization = () => {
-//         console.log("--- Render Visualization --- Strategy:", transformStrategy, "Options:", transformOptions);
-
-//         const svg = d3.select(graphRef.current);
-//         svg.selectAll("*").remove();
-
-//         const width = 800;
-//         const height = 800;
-//         const margin = 20;
-//         const maxRadius = Math.min(width, height) / 2 - margin;
-
-//         svg
-//             .attr("width", width)
-//             .attr("height", height)
-//             .attr("viewBox", `0 0 ${width} ${height}`)
-//             .style("background", "#f0f0f0")
-//             .style("border", "1px solid #000");
-
-//         const g = svg
-//             .append("g")
-//             .attr("transform", `translate(${width / 2}, ${height / 2})`);
-
-//         const tooltip = createTooltip();
-
-//         let ringStructure;
-//         let sectorCounts;
-
-//         ringStructure = generateRingStructure(
-//             jsonData,
-//             transformStrategy,
-//             transformOptions,
-//             labelsData
-//         );
-//         sectorCounts = calculateSectorPointCounts(
-//             ringStructure,
-//             transformStrategy,
-//             transformOptions,
-//             labelsData
-//         );
-
-//         console.log("Ring Structure:", ringStructure);
-//         console.log("Sector Counts:", sectorCounts);
-
-//         const { getRingColor, getSectorColor } = generateColorSchemes(ringStructure.length);
-
-//         // Create enhanced label color function
-//         const colorScale = d3.scaleOrdinal(d3.schemeCategory10)
-//             .domain(Object.keys(labelsData.labels || {}));
-
-//         const getLabelColor = (pointId) => {
-//             if (!labelsData || !labelsData.labels) return "#666";
-//             for (const label of Object.keys(labelsData.labels)) {
-//                 const pointList = labelsData.labels[label];
-//                 if (Array.isArray(pointList) && pointList.includes(Number(pointId))) {
-//                     return colorScale(label);
-//                 }
-//             }
-//             return "#666";
-//         };
-
-//         const sectorAngles = viewMode === 'proportional' ?
-//             calculateProportionalSectorAngles(sectorCounts, showEmptySectors) : null;
-
-//         // Store point positions for connections
-//         const pointPositions = {};
-//         const ringLabels = ringStructure.map((_, i) => String.fromCharCode(65 + i));
-
-//         //// Inside renderVisualization, replace the ringStructure.forEach loop with:
-//         ringStructure.forEach((ring, index) => {
-//             if (!ringVisibility[ring.key]) return;
-
-//             console.log(`\n--- Processing Ring ${index} (${ring.key}) ---`);
-
-//             const innerRadius = (index / ringStructure.length) * maxRadius;
-//             const outerRadius = ((index + 1) / ringStructure.length) * maxRadius;
-
-//             // Render ring sectors
-//             renderRingSectors(
-//                 g,
-//                 ring,
-//                 index,
-//                 innerRadius,
-//                 outerRadius,
-//                 getSectorColor,
-//                 sectorCounts[index] || [],
-//                 sectorAngles ? sectorAngles[index] : null,
-//                 animationEnabled,
-//             );
-
-//             // Add ring label
-//             let ringLabelText = `${ringLabels[index]} (${ring.points?.length || 0} points)`;
-
-//             const ringLabel = g.append("text")
-//                 .attr("x", 0)
-//                 .attr("y", -outerRadius - 10)
-//                 .attr("text-anchor", "middle")
-//                 .attr("font-size", "14px")
-//                 .attr("fill", getRingColor(index))
-//                 .attr("font-weight", "bold")
-//                 .attr("stroke", "white")
-//                 .attr("stroke-width", "0.5")
-//                 .text(ringLabelText);
-
-//             if (animationEnabled) {
-//                 ringLabel
-//                     .style("opacity", 0)
-//                     .transition()
-//                     .duration(1000)
-//                     .delay(index * 200)
-//                     .style("opacity", 1);
-//             }
-
-//             // Calculate and render points
-//             let positions;
-
-//             positions = calculatePointPositions(
-//                 ring.points || [],
-//                 index,
-//                 innerRadius,
-//                 outerRadius,
-//                 ring.sectors,
-//                 sectorAngles ? sectorAngles[index] : null,
-//                 viewMode,
-//                 showEmptySectors,
-//                 transformStrategy,
-//                 transformOptions,
-//                 ring
-//             );
-
-//             console.log(`Positions calculated for ring ${index}: ${positions.length}`);
-
-//             positions.forEach(({ point, x, y, sectorIndex }, pointIndex) => {
-//                 const pointIds = Array.isArray(point.Point_ID) ? point.Point_ID : [point.Point_ID];
-
-//                 pointIds.forEach((id) => {
-//                     if (!pointPositions[id]) {
-//                         pointPositions[id] = [];
-//                     }
-//                     pointPositions[id].push({
-//                         x,
-//                         y,
-//                         point,
-//                         subspaceId: ring.key,
-//                         ringIndex: index,
-//                         sectorIndex,
-//                     });
-//                     console.log(`Stored position for Point_ID ${id} at ring ${index}: x=${x.toFixed(2)}, y=${y.toFixed(2)}`);
-//                 });
-
-//                 // Draw point
-//                 drawEnhancedPoint(
-//                     g,
-//                     point,
-//                     x,
-//                     y,
-//                     ring,
-//                     tooltip,
-//                     labelsData,
-//                     getLabelColor,
-//                     pointIndex,
-//                     animationEnabled,
-//                 );
-//             });
-//         });
-
-//         // Draw enhanced connections
-//         drawEnhancedConnections(g, pointPositions, getLabelColor, tooltip);
-
-//         // Add enhanced zoom functionality
-//         const zoom = d3.zoom()
-//             .scaleExtent([0.1, 10])
-//             .on("zoom", (event) => {
-//                 g.attr("transform", event.transform);
-//                 setZoomLevel(event.transform.k);
-//             });
-
-//         svg.call(zoom);
-
-//         // Add zoom controls
-//         addZoomControls(svg, zoom);
-
-//         // Render linear strips
-//         renderLinearStrips(ringStructure, sectorCounts);
-
-//         console.log("=== RENDER VISUALIZATION END ===\n");
-
-//         // Cleanup function
-//         return () => {
-//             tooltip.remove();
-//         };
-//     };
-
-//     const createTooltip = () => {
-//         return d3
-//             .select("body")
-//             .append("div")
-//             .attr("class", "hierarchical-tooltip")
-//             .style("position", "absolute")
-//             .style("visibility", "hidden")
-//             .style("background-color", "rgba(0, 0, 0, 0.85)")
-//             .style("color", "white")
-//             .style("padding", "8px 12px")
-//             .style("border-radius", "6px")
-//             .style("font-size", "12px")
-//             .style("font-family", "monospace")
-//             .style("z-index", "10000")
-//             .style("box-shadow", "0 2px 8px rgba(0,0,0,0.3)")
-//             .style("max-width", "300px")
-//             .style("line-height", "1.4");
-//     };
-
-//     const renderRingSectors = (
-//         g,
-//         ring,
-//         ringIndex,
-//         innerRadius,
-//         outerRadius,
-//         getSectorColor,
-//         sectorCounts,
-//         sectorAngles,
-//         animated = false,
-//     ) => {
-//         const rotationOffset = Math.PI / 2; // 0° at 3 o'clock
-//         const sectorsGroup = g.append("g").attr("class", `ring-${ringIndex}-sectors`);
-
-//         if (transformStrategy === CoordinateTransforms.RADIAL) {
-//             console.log(`Rendering ring ${ringIndex} outline for RADIAL mode`);
-//             // Draw a single ring outline, 359° anticlockwise
-//             const ringPath = sectorsGroup.append("path")
-//                 .attr("d", d3.arc()
-//                     .innerRadius(innerRadius)
-//                     .outerRadius(outerRadius)
-//                     .startAngle(rotationOffset)
-//                     .endAngle(rotationOffset + (359 * Math.PI / 180))
-//                 )
-//                 .attr("fill", "none")
-//                 .attr("stroke", getSectorColor(ringIndex, 0))
-//                 .attr("stroke-width", 2)
-//                 .attr("stroke-opacity", 0.5);
-
-//             if (animated) {
-//                 ringPath
-//                     .style("opacity", 0)
-//                     .transition()
-//                     .duration(800)
-//                     .delay(ringIndex * 100)
-//                     .style("opacity", 1);
-//             }
-//             return;
-//         }
-
-//         if (viewMode === 'normal') {
-//             const sectorsToRender = showEmptySectors ?
-//                 Array.from({ length: ring.sectors }, (_, i) => i) :
-//                 Array.from({ length: ring.sectors }, (_, i) => i).filter(i => (sectorCounts[i] || 0) > 0);
-
-//             const anglePerSector = 2 * Math.PI / (showEmptySectors ? ring.sectors : sectorsToRender.length);
-
-//             sectorsToRender.forEach((sectorIndex, displayIndex) => {
-//                 const actualIndex = showEmptySectors ? sectorIndex : displayIndex;
-//                 const startAngle = (anglePerSector * actualIndex) + rotationOffset;
-//                 const endAngle = (anglePerSector * (actualIndex + 1)) + rotationOffset;
-
-//                 const sector = sectorsGroup.append("path")
-//                     .attr("d", d3.arc()
-//                         .innerRadius(innerRadius)
-//                         .outerRadius(outerRadius)
-//                         .startAngle(startAngle)
-//                         .endAngle(endAngle)
-//                     )
-//                     .attr("fill", getSectorColor(ringIndex, sectorIndex))
-//                     .style("cursor", "pointer")
-//                     .on("mouseover", function () {
-//                         d3.select(this).attr("fill-opacity", 0.6);
-//                     })
-//                     .on("mouseout", function () {
-//                         d3.select(this).attr("fill-opacity", 0.3);
-//                     });
-
-//                 if (animated) {
-//                     sector
-//                         .style("opacity", 0)
-//                         .transition()
-//                         .duration(800)
-//                         .delay(ringIndex * 100 + actualIndex * 50)
-//                         .style("opacity", 1);
-//                 }
-//             });
-
-//         } else if (viewMode === 'proportional' && sectorAngles) {
-//             let currentAngle = rotationOffset;
-
-//             sectorAngles.forEach((angle, sectorIndex) => {
-//                 if (!showEmptySectors && angle === 0) return;
-
-//                 const startAngle = currentAngle;
-//                 const endAngle = currentAngle + angle;
-
-//                 const sector = sectorsGroup.append("path")
-//                     .attr("d", d3.arc()
-//                         .innerRadius(innerRadius)
-//                         .outerRadius(outerRadius)
-//                         .startAngle(startAngle)
-//                         .endAngle(endAngle)
-//                     )
-//                     .attr("fill", getSectorColor(ringIndex, sectorIndex))
-//                     .style("cursor", "pointer")
-//                     .on("mouseover", function () {
-//                         d3.select(this).attr("fill-opacity", 0.6);
-//                     })
-//                     .on("mouseout", function () {
-//                         d3.select(this).attr("fill-opacity", 0.3);
-//                     });
-
-//                 if (animated) {
-//                     sector
-//                         .style("opacity", 0)
-//                         .transition()
-//                         .duration(800)
-//                         .delay(ringIndex * 100 + sectorIndex * 50)
-//                         .style("opacity", 1);
-//                 }
-
-//                 currentAngle = endAngle;
-//             });
-//         }
-//     };
-
-//     const drawEnhancedPoint = (g, point, x, y, ring, tooltip, labelsData, getLabelColor, pointIndex, animated) => {
-//         const pointIds = Array.isArray(point.Point_ID) ? point.Point_ID : [point.Point_ID];
-//         const isSelected = pointIds.some(id => selectedPoints.has(id));
-
-//         const pointElement = g.append("circle")
-//             .attr("cx", x)
-//             .attr("cy", y)
-//             .attr("r", isSelected ? 5 : 3)
-//             .attr("fill", isSelected ? "#ff4444" : getLabelColor(pointIds[0]) || "#333")
-//             .attr("stroke", isSelected ? "#fff" : "#fff")
-//             .attr("stroke-width", isSelected ? 2 : 0.25)
-//             .style("pointer-events", "visible")
-//             .style("cursor", "pointer")
-//             .on("click", () => {
-//                 const newSelected = new Set(selectedPoints);
-//                 const wasSelected = pointIds.some(id => selectedPoints.has(id));
-
-//                 if (wasSelected) {
-//                     pointIds.forEach(id => newSelected.delete(id));
-//                 } else {
-//                     pointIds.forEach(id => newSelected.add(id));
-//                 }
-//                 setSelectedPoints(newSelected);
-//             })
-//             .on("mouseover", (event) => {
-//                 const pointIdsStr = pointIds.join(", ");
-//                 let associatedLabels = [];
-
-//                 if (labelsData && labelsData.labels) {
-//                     Object.entries(labelsData.labels).forEach(([label, pointList]) => {
-//                         if (pointIds.some(id => pointList.includes(Number(id)))) {
-//                             associatedLabels.push(label);
-//                         }
-//                     });
-//                 }
-
-//                 const labelText = associatedLabels.length > 0 ? associatedLabels.join(", ") : "No Label";
-//                 const transformInfo = getTransformationInfo(point);
-
-//                 tooltip
-//                     .style("visibility", "visible")
-//                     .html(
-//                         `<strong>Point IDs:</strong> ${pointIdsStr}<br>` +
-//                         `<strong>Position:</strong> (${x.toFixed(2)}, ${y.toFixed(2)})<br>` +
-//                         `<strong>Subspace:</strong> ${ring.key}<br>` +
-//                         `<strong>Labels:</strong> ${labelText}<br>` +
-//                         `<strong>Transform:</strong> ${transformInfo}<br>` +
-//                         `<strong>Ring:</strong> ${ring.subspaceId || 'N/A'}`
-//                     );
-
-//                 setHoveredCoordinates({ ...point, label: labelText });
-
-//                 // Highlight effect
-//                 d3.select(event.currentTarget)
-//                     .transition()
-//                     .duration(200)
-//                     .attr("r", isSelected ? 8 : 6)
-//                     .attr("stroke-width", 3);
-//             })
-//             .on("mousemove", (event) => {
-//                 tooltip
-//                     .style("top", (event.pageY + 10) + "px")
-//                     .style("left", (event.pageX + 10) + "px");
-//             })
-//             .on("mouseout", (event) => {
-//                 tooltip.style("visibility", "hidden");
-//                 setHoveredCoordinates(null);
-
-//                 // Remove highlight effect
-//                 d3.select(event.currentTarget)
-//                     .transition()
-//                     .duration(200)
-//                     .attr("r", isSelected ? 5 : 3)
-//                     .attr("stroke-width", isSelected ? 2 : 0.25);
-//             });
-
-//         if (animated) {
-//             pointElement
-//                 .style("opacity", 0)
-//                 .attr("r", 0)
-//                 .transition()
-//                 .duration(600)
-//                 .delay(pointIndex * 20)
-//                 .style("opacity", 1)
-//                 .attr("r", isSelected ? 5 : 3);
-//         }
-//     };
-
-//     const drawEnhancedConnections = (g, pointPositions, getLabelColor, tooltip) => {
-//         if (!highlightConnections) return;
-
-//         const connectionsGroup = g.append("g").attr("class", "connections");
-//         console.log('Drawing connections, pointPositions:', Object.keys(pointPositions).length, 'points');
-
-//         Object.entries(pointPositions).forEach(([pointId, positions]) => {
-//             if (positions.length > 1) {
-//                 const isHighlighted = selectedPoints.has(Number(pointId));
-//                 console.log(`Connecting point ID ${pointId}, positions: ${positions.length}`);
-
-//                 // Sort positions by ringIndex to ensure sequential connections
-//                 const sortedPositions = positions.sort((a, b) => a.ringIndex - b.ringIndex);
-
-//                 for (let i = 0; i < sortedPositions.length - 1; i++) {
-//                     const startPos = sortedPositions[i];
-//                     const endPos = sortedPositions[i + 1];
-
-//                     connectionsGroup.append("line")
-//                         .attr("x1", startPos.x)
-//                         .attr("y1", startPos.y)
-//                         .attr("x2", endPos.x)
-//                         .attr("y2", endPos.y)
-//                         .attr("stroke", isHighlighted ? "#ff4444" : getLabelColor(pointId))
-//                         .attr("stroke-width", isHighlighted ? 2 : 1)
-//                         .attr("stroke-opacity", isHighlighted ? 0.9 : 0.6)
-//                         .attr("stroke-dasharray", isHighlighted ? "none" : "2,2")
-//                         .style("cursor", "pointer")
-//                         .on("mouseover", (event) => {
-//                             tooltip
-//                                 .style("visibility", "visible")
-//                                 .html(`<strong>Connection:</strong> Point ID ${pointId}<br>
-//                                    <strong>Between:</strong> ${startPos.subspaceId} → ${endPos.subspaceId}<br>
-//                                    <strong>From:</strong> (${startPos.x.toFixed(2)}, ${startPos.y.toFixed(2)})<br>
-//                                    <strong>To:</strong> (${endPos.x.toFixed(2)}, ${endPos.y.toFixed(2)})`);
-
-//                             d3.select(event.currentTarget)
-//                                 .attr("stroke-width", 3)
-//                                 .attr("stroke-opacity", 1);
-//                         })
-//                         .on("mousemove", (event) => {
-//                             tooltip
-//                                 .style("top", (event.pageY + 10) + "px")
-//                                 .style("left", (event.pageX + 10) + "px");
-//                         })
-//                         .on("mouseout", (event) => {
-//                             tooltip.style("visibility", "hidden");
-//                             d3.select(event.currentTarget)
-//                                 .attr("stroke-width", isHighlighted ? 2 : 1)
-//                                 .attr("stroke-opacity", isHighlighted ? 0.9 : 0.6);
-//                         });
-//                 }
-//             }
-//         });
-//     };
-
-//     const addZoomControls = (svg, zoom) => {
-//         const controlsGroup = svg.append("g")
-//             .attr("class", "zoom-controls")
-//             .attr("transform", "translate(20, 20)");
-
-//         // Zoom in button
-//         controlsGroup.append("circle")
-//             .attr("cx", 0)
-//             .attr("cy", 0)
-//             .attr("r", 20)
-//             .attr("fill", "rgba(255,255,255,0.8)")
-//             .attr("stroke", "#333")
-//             .style("cursor", "pointer")
-//             .on("click", () => {
-//                 svg.transition().call(zoom.scaleBy, 1.5);
-//             });
-
-//         controlsGroup.append("text")
-//             .attr("text-anchor", "middle")
-//             .attr("dy", "0.35em")
-//             .text("+")
-//             .style("font-size", "16px")
-//             .style("pointer-events", "none");
-
-//         // Zoom out button
-//         controlsGroup.append("circle")
-//             .attr("cx", 0)
-//             .attr("cy", 50)
-//             .attr("r", 20)
-//             .attr("fill", "rgba(255,255,255,0.8)")
-//             .attr("stroke", "#333")
-//             .style("cursor", "pointer")
-//             .on("click", () => {
-//                 svg.transition().call(zoom.scaleBy, 0.67);
-//             });
-
-//         controlsGroup.append("text")
-//             .attr("x", 0)
-//             .attr("y", 50)
-//             .attr("text-anchor", "middle")
-//             .attr("dy", "0.35em")
-//             .text("−")
-//             .style("font-size", "16px")
-//             .style("pointer-events", "none");
-
-//         // Reset zoom button
-//         controlsGroup.append("circle")
-//             .attr("cx", 0)
-//             .attr("cy", 100)
-//             .attr("r", 20)
-//             .attr("fill", "rgba(255,255,255,0.8)")
-//             .attr("stroke", "#333")
-//             .style("cursor", "pointer")
-//             .on("click", () => {
-//                 svg.transition().call(zoom.transform, d3.zoomIdentity);
-//             });
-
-//         controlsGroup.append("text")
-//             .attr("x", 0)
-//             .attr("y", 100)
-//             .attr("text-anchor", "middle")
-//             .attr("dy", "0.35em")
-//             .text("⌂")
-//             .style("font-size", "12px")
-//             .style("pointer-events", "none");
-//     };
-
-//     const renderLinearStrips = (ringStructure, sectorCounts) => {
-//         const container = d3.select(stripsContainerRef.current);
-//         container.selectAll("*").remove();
-
-//         ringStructure.forEach((ring, ringIndex) => {
-//             if (!ringVisibility[ring.key]) return;
-
-//             const stripDiv = container.append("div")
-//                 .style("margin-bottom", "20px")
-//                 .style("padding", "10px")
-//                 .style("border", "1px solid #ddd")
-//                 .style("border-radius", "4px")
-//                 .style("background-color", "#f9f9f9");
-
-//             stripDiv.append("h3")
-//                 .style("margin", "0 0 10px 0")
-//                 .style("font-size", "14px")
-//                 .text(`Ring ${String.fromCharCode(65 + ringIndex)}: ${ring.key} (${ring.points?.length || 0} points)`);
-
-//             const stripSvg = stripDiv.append("svg")
-//                 .attr("width", "100%")
-//                 .attr("height", "60px");
-
-//             const stripWidth = 700;
-//             const stripHeight = 40;
-//             const counts = sectorCounts[ringIndex] || [];
-//             const maxCount = Math.max(...counts, 1);
-
-//             counts.forEach((count, sectorIndex) => {
-//                 const sectorWidth = stripWidth / counts.length;
-//                 const barHeight = (count / maxCount) * stripHeight;
-
-//                 stripSvg.append("rect")
-//                     .attr("x", sectorIndex * sectorWidth)
-//                     .attr("y", stripHeight - barHeight)
-//                     .attr("width", sectorWidth - 1)
-//                     .attr("height", barHeight)
-//                     .attr("fill", count > 0 ? "#4CAF50" : "#ddd")
-//                     .attr("stroke", "#333")
-//                     .attr("stroke-width", 0.5);
-
-//                 stripSvg.append("text")
-//                     .attr("x", sectorIndex * sectorWidth + sectorWidth / 2)
-//                     .attr("y", stripHeight + 15)
-//                     .attr("text-anchor", "middle")
-//                     .style("font-size", "10px")
-//                     .text(count);
-//             });
-//         });
-//     };
-
-//     const getTransformationInfo = (point) => {
-//         if (transformStrategy === CoordinateTransforms.RADIAL) {
-//             const feature = Object.keys(point).find(key => key !== 'Point_ID' && typeof point[key] === 'number');
-//             const angle = point.angle !== undefined ? (point.angle * 180 / Math.PI).toFixed(2) : 'N/A';
-//             return `radial (Feature: ${feature}, Angle: ${angle}°)`;
-//         }
-//         const coords = Object.entries(point).filter(([key]) => key !== "Point_ID");
-//         const values = coords.slice(0, 3).map(([_, val]) => val.toFixed(2)).join(", ");
-//         const strategy = transformStrategy.replace('_', ' ').toLowerCase();
-//         return `${strategy} (${values}${coords.length > 3 ? '...' : ''})`;
-//     };
-
-//     const handleTransformOptionChange = (key, value) => {
-//         setTransformOptions(prev => ({
-//             ...prev,
-//             [key]: parseFloat(value) || 0
-//         }));
-//     };
-
-//     return (
-//         <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
-//             {/* Enhanced Control Panel */}
-//             <div style={{
-//                 marginBottom: "20px",
-//                 padding: "15px",
-//                 backgroundColor: "#f8f9fa",
-//                 borderRadius: "8px",
-//                 border: "1px solid #e9ecef"
-//             }}>
-//                 {/* View Mode Controls */}
-//                 <div style={{ marginBottom: "15px" }}>
-//                     <strong>View Mode:</strong>
-//                     <div style={{ display: "inline-block", marginLeft: "10px" }}>
-//                         {['normal', 'proportional'].map(mode => (
-//                             <button
-//                                 key={mode}
-//                                 onClick={() => setViewMode(mode)}
-//                                 style={{
-//                                     marginRight: "5px",
-//                                     padding: "6px 12px",
-//                                     backgroundColor: viewMode === mode ? "#007bff" : "#f8f9fa",
-//                                     color: viewMode === mode ? "white" : "#495057",
-//                                     border: "1px solid #dee2e6",
-//                                     borderRadius: "4px",
-//                                     cursor: "pointer",
-//                                     fontSize: "12px"
-//                                 }}
-//                             >
-//                                 {mode.charAt(0).toUpperCase() + mode.slice(1)}
-//                             </button>
-//                         ))}
-//                     </div>
-//                 </div>
-
-//                 {/* Feature Toggles */}
-//                 <div style={{ marginBottom: "15px" }}>
-//                     <strong>Options:</strong>
-//                     {[
-//                         { state: showEmptySectors, setter: setShowEmptySectors, label: 'Empty Sectors' },
-//                         { state: highlightConnections, setter: setHighlightConnections, label: 'Connections' },
-//                         { state: animationEnabled, setter: setAnimationEnabled, label: 'Animations' }
-//                     ].map(({ state, setter, label }) => (
-//                         <button
-//                             key={label}
-//                             onClick={() => setter(!state)}
-//                             style={{
-//                                 marginLeft: "10px",
-//                                 padding: "6px 12px",
-//                                 backgroundColor: state ? "#28a745" : "#6c757d",
-//                                 color: "white",
-//                                 border: "none",
-//                                 borderRadius: "4px",
-//                                 cursor: "pointer",
-//                                 fontSize: "12px"
-//                             }}
-//                         >
-//                             {state ? '✓' : '✗'} {label}
-//                         </button>
-//                     ))}
-//                 </div>
-
-//                 {/* Transformation Strategy Controls */}
-//                 <div style={{ marginBottom: "10px" }}>
-//                     <strong>Coordinate Transform:</strong>
-//                     <select
-//                         value={transformStrategy}
-//                         onChange={(e) => setTransformStrategy(e.target.value)}
-//                         style={{
-//                             marginLeft: "10px",
-//                             padding: "6px",
-//                             borderRadius: "4px",
-//                             border: "1px solid #ced4da",
-//                             fontSize: "12px"
-//                         }}
-//                     >
-//                         <option value={CoordinateTransforms.POSITIVE_NEGATIVE}>Positive/Negative</option>
-//                         <option value={CoordinateTransforms.Z_SCORE}>Z-Score</option>
-//                         <option value={CoordinateTransforms.PERCENTILE}>Percentile</option>
-//                         <option value={CoordinateTransforms.CUSTOM_THRESHOLD}>Custom Threshold</option>
-//                         <option value={CoordinateTransforms.RADIAL}>Radial</option>
-//                     </select>
-
-
-//                     {(transformStrategy === CoordinateTransforms.Z_SCORE ||
-//                         transformStrategy === CoordinateTransforms.CUSTOM_THRESHOLD) && (
-//                             <label style={{ marginLeft: "15px", fontSize: "12px" }}>
-//                                 Threshold:
-//                                 <input
-//                                     type="number"
-//                                     step="0.1"
-//                                     value={transformOptions.threshold}
-//                                     onChange={(e) => handleTransformOptionChange('threshold', e.target.value)}
-//                                     style={{ marginLeft: "5px", width: "60px", padding: "4px", fontSize: "12px" }}
-//                                 />
-//                             </label>
-//                         )}
-
-//                     {transformStrategy === CoordinateTransforms.PERCENTILE && (
-//                         <label style={{ marginLeft: "15px", fontSize: "12px" }}>
-//                             Percentile:
-//                             <input
-//                                 type="number"
-//                                 min="0"
-//                                 max="100"
-//                                 value={transformOptions.percentile}
-//                                 onChange={(e) => handleTransformOptionChange('percentile', e.target.value)}
-//                                 style={{ marginLeft: "5px", width: "60px", padding: "4px", fontSize: "12px" }}
-//                             />
-//                         </label>
-//                     )}
-//                     {/* {transformStrategy === CoordinateTransforms.RADIAL && (
-//                         <label style={{ marginLeft: "15px", fontSize: "12px" }}>
-//                             Feature:
-//                             <select
-//                                 value={transformOptions.feature || ''}
-//                                 onChange={(e) => handleTransformOptionChange('feature', e.target.value)}
-//                                 style={{ marginLeft: "5px", padding: "4px", fontSize: "12px" }}
-//                             >
-//                                 {jsonData && Object.keys(jsonData[Object.keys(jsonData)[0]][0] || {})
-//                                     .filter(key => key !== 'Point_ID' && typeof jsonData[Object.keys(jsonData)[0]][0][key] === 'number')
-//                                     .map(key => (
-//                                         <option key={key} value={key}>{key}</option>
-//                                     ))}
-//                             </select>
-//                         </label>
-//                     )} */}
-
-//                 </div>
-
-//                 {/* Status Info */}
-//                 <div style={{ fontSize: "11px", color: "#6c757d", marginTop: "10px" }}>
-//                     Selected Points: {selectedPoints.size} | Zoom: {(zoomLevel * 100).toFixed(0)}%
-//                 </div>
-//             </div>
-
-//             {/* Main Visualization */}
-//             <div style={{ position: "relative" }}>
-//                 <svg ref={graphRef} style={{ width: "100%", height: "800px", border: "1px solid #ddd" }}></svg>
-//             </div>
-
-
-//             {/* Linear Strip Visualizations */}
-//             <div style={{ marginTop: "20px" }}>
-//                 <h2 style={{ fontSize: "18px", marginBottom: "10px" }}>Linear Strip Visualizations</h2>
-//                 <div
-//                     ref={stripsContainerRef}
-//                     style={{
-//                         maxHeight: "500px",
-//                         overflowY: "auto",
-//                         border: "1px solid #ddd",
-//                         borderRadius: "4px",
-//                         padding: "10px"
-//                     }}
-//                 ></div>
-//             </div>
-//         </div>
-//     );
-// };
-
-// export default HierarchicalGraph;
-
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import * as d3 from "d3";
 import {
@@ -847,6 +9,7 @@ import {
     generateColorSchemes,
     calculatePointPositions,
 } from "./ModularB";
+
 
 const HierarchicalGraph = ({
     jsonData,
@@ -862,15 +25,16 @@ const HierarchicalGraph = ({
     const [transformOptions, setTransformOptions] = useState({
         threshold: 0,
         percentile: 50,
-        maxDepth: 4,
-        minSamplesLeaf: 3,
-        minSamplesSplit: 5,
+        maxDepth: 4, // DT
+        minSamplesLeaf: 3, // DT
+        minSamplesSplit: 5, // DT
     });
+
     const [selectedPoints, setSelectedPoints] = useState(new Set());
     const [highlightConnections, setHighlightConnections] = useState(true);
     const [animationEnabled, setAnimationEnabled] = useState(false);
     const [zoomLevel, setZoomLevel] = useState(1);
-    const [decisionTreeFullDataState, setDecisionTreeFullDataState] = useState(null);
+    const [decisionTreeFullData, setDecisionTreeFullData] = useState(null); // DT
 
     // Memoized validation and rendering
     const isValidData = useCallback(() => {
@@ -911,56 +75,29 @@ const HierarchicalGraph = ({
         const height = 800;
         const margin = 20;
         const maxRadius = Math.min(width, height) / 2 - margin;
-        const svgRotationOffset = Math.PI / 2; // Rotate so 0 rad is at 12 o'clock
 
         svg
             .attr("width", width)
             .attr("height", height)
-            .attr("viewBox", `${-width / 2} ${-height / 2} ${width} ${height}`) // Center coordinate system
+            .attr("viewBox", `0 0 ${width} ${height}`)
             .style("background", "#f0f0f0")
             .style("border", "1px solid #000");
 
         const g = svg
-            .append("g");
+            .append("g")
+            .attr("transform", `translate(${width / 2}, ${height / 2})`);
 
         const tooltip = createTooltip();
 
         let ringStructure;
         let sectorCounts;
-        let dataPointsToDraw = [];
-        let localDecisionTreeData = null;
 
-        if (transformStrategy === CoordinateTransforms.DECISION_TREE) {
-            const dataKeyForTree = Object.keys(jsonData)[0];
-            const pointsForTree = jsonData[dataKeyForTree] || [];
-            if (pointsForTree.length > 0) {
-                localDecisionTreeData = transformCoordinates(pointsForTree, transformStrategy, {
-                    ...transformOptions,
-                    labelsData
-                });
-                setDecisionTreeFullDataState(localDecisionTreeData);
-
-                if (localDecisionTreeData && localDecisionTreeData.structure && localDecisionTreeData.structure.levels) {
-                    ringStructure = generateRingStructure(localDecisionTreeData.structure.levels, transformStrategy);
-                    dataPointsToDraw = localDecisionTreeData.transformedPoints || [];
-                } else {
-                    console.error("Decision Tree transformation failed or returned invalid structure.");
-                    ringStructure = [];
-                }
-            } else {
-                console.error("No data provided for Decision Tree strategy under key:", dataKeyForTree);
-                ringStructure = [];
-            }
-        } else {
-            setDecisionTreeFullDataState(null);
-            ringStructure = generateRingStructure(
-                jsonData,
-                transformStrategy,
-                transformOptions,
-                labelsData
-            );
-        }
-
+        ringStructure = generateRingStructure(
+            jsonData,
+            transformStrategy,
+            transformOptions,
+            labelsData
+        );
         sectorCounts = calculateSectorPointCounts(
             ringStructure,
             transformStrategy,
@@ -971,17 +108,14 @@ const HierarchicalGraph = ({
         console.log("Ring Structure:", ringStructure);
         console.log("Sector Counts:", sectorCounts);
 
-        const { getRingColor, getSectorColor: getBaseSectorColor } = generateColorSchemes(ringStructure.length);
+        const { getRingColor, getSectorColor } = generateColorSchemes(ringStructure.length);
 
-        const uniqueActualLabels = labelsData && labelsData.labels ? Object.keys(labelsData.labels) : ['unlabeled'];
-        const colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(uniqueActualLabels);
+        // Create enhanced label color function
+        const colorScale = d3.scaleOrdinal(d3.schemeCategory10)
+            .domain(Object.keys(labelsData.labels || {}));
 
-        const getLabelColor = (point) => {
-            if (transformStrategy === CoordinateTransforms.DECISION_TREE && point.predicted_class) {
-                return colorScale(point.predicted_class);
-            }
+        const getLabelColor = (pointId) => {
             if (!labelsData || !labelsData.labels) return "#666";
-            const pointId = Array.isArray(point.Point_ID) ? point.Point_ID[0] : point.Point_ID;
             for (const label of Object.keys(labelsData.labels)) {
                 const pointList = labelsData.labels[label];
                 if (Array.isArray(pointList) && pointList.includes(Number(pointId))) {
@@ -991,50 +125,37 @@ const HierarchicalGraph = ({
             return "#666";
         };
 
-        const getSectorVisualFillColor = (ringData, sectorOrNodeIndex, ringIndex) => {
-            if (transformStrategy === CoordinateTransforms.DECISION_TREE) {
-                const node = ringData.points[sectorOrNodeIndex];
-                if (!node) return "#f0f0f0";
-                if (node.isLeaf) {
-                    return d3.color(colorScale(node.majorityClass || 'unlabeled')).brighter(0.3).toString();
-                }
-                const giniColor = d3.scaleSequential(d3.interpolateBlues).domain([0.5, 0]);
-                return giniColor(node.giniImpurity);
-            }
-            return getBaseSectorColor(ringIndex, sectorOrNodeIndex);
-        };
-
         const sectorAngles = viewMode === 'proportional' ?
             calculateProportionalSectorAngles(sectorCounts, showEmptySectors) : null;
 
+        // Store point positions for connections
         const pointPositions = {};
         const ringLabels = ringStructure.map((_, i) => String.fromCharCode(65 + i));
 
+        //// Inside renderVisualization, replace the ringStructure.forEach loop with:
         ringStructure.forEach((ring, index) => {
-            if (!ringVisibility[ring.key] && transformStrategy !== CoordinateTransforms.DECISION_TREE) return;
+            if (!ringVisibility[ring.key]) return;
 
             console.log(`\n--- Processing Ring ${index} (${ring.key}) ---`);
 
             const innerRadius = (index / ringStructure.length) * maxRadius;
             const outerRadius = ((index + 1) / ringStructure.length) * maxRadius;
 
+            // Render ring sectors
             renderRingSectors(
                 g,
                 ring,
                 index,
                 innerRadius,
                 outerRadius,
-                getSectorVisualFillColor,
+                getSectorColor,
                 sectorCounts[index] || [],
                 sectorAngles ? sectorAngles[index] : null,
                 animationEnabled,
-                svgRotationOffset,
-                tooltip
             );
 
-            let ringLabelText = transformStrategy === CoordinateTransforms.DECISION_TREE
-                ? `Lvl ${index} (${ring.points.length} Nodes)`
-                : `${ringLabels[index]} (${ring.points?.length || 0} points)`;
+            // Add ring label
+            let ringLabelText = `${ringLabels[index]} (${ring.points?.length || 0} points)`;
 
             const ringLabel = g.append("text")
                 .attr("x", 0)
@@ -1056,13 +177,11 @@ const HierarchicalGraph = ({
                     .style("opacity", 1);
             }
 
+            // Calculate and render points
             let positions;
-            const pointsToConsider = transformStrategy === CoordinateTransforms.DECISION_TREE
-                ? dataPointsToDraw
-                : ring.points || [];
 
             positions = calculatePointPositions(
-                pointsToConsider,
+                ring.points || [],
                 index,
                 innerRadius,
                 outerRadius,
@@ -1072,13 +191,12 @@ const HierarchicalGraph = ({
                 showEmptySectors,
                 transformStrategy,
                 transformOptions,
-                ring,
-                0
+                ring
             );
 
             console.log(`Positions calculated for ring ${index}: ${positions.length}`);
 
-            positions.forEach(({ point, x, y, sectorIndex, nodeId }, pointIndex) => {
+            positions.forEach(({ point, x, y, sectorIndex }, pointIndex) => {
                 const pointIds = Array.isArray(point.Point_ID) ? point.Point_ID : [point.Point_ID];
 
                 pointIds.forEach((id) => {
@@ -1092,11 +210,11 @@ const HierarchicalGraph = ({
                         subspaceId: ring.key,
                         ringIndex: index,
                         sectorIndex,
-                        nodeId
                     });
                     console.log(`Stored position for Point_ID ${id} at ring ${index}: x=${x.toFixed(2)}, y=${y.toFixed(2)}`);
                 });
 
+                // Draw point
                 drawEnhancedPoint(
                     g,
                     point,
@@ -1108,19 +226,14 @@ const HierarchicalGraph = ({
                     getLabelColor,
                     pointIndex,
                     animationEnabled,
-                    transformStrategy
                 );
             });
         });
 
-        if (highlightConnections) {
-            if (transformStrategy === CoordinateTransforms.DECISION_TREE && localDecisionTreeData && localDecisionTreeData.structure) {
-                drawDecisionTreeEdges(g, localDecisionTreeData.structure, maxRadius, ringStructure, svgRotationOffset, getRingColor);
-            } else {
-                drawEnhancedConnections(g, pointPositions, getLabelColor, tooltip);
-            }
-        }
+        // Draw enhanced connections
+        drawEnhancedConnections(g, pointPositions, getLabelColor, tooltip);
 
+        // Add enhanced zoom functionality
         const zoom = d3.zoom()
             .scaleExtent([0.1, 10])
             .on("zoom", (event) => {
@@ -1129,11 +242,16 @@ const HierarchicalGraph = ({
             });
 
         svg.call(zoom);
+
+        // Add zoom controls
         addZoomControls(svg, zoom);
-        renderLinearStrips(ringStructure, sectorCounts, getSectorVisualFillColor);
+
+        // Render linear strips
+        renderLinearStrips(ringStructure, sectorCounts);
 
         console.log("=== RENDER VISUALIZATION END ===\n");
 
+        // Cleanup function
         return () => {
             tooltip.remove();
         };
@@ -1167,57 +285,14 @@ const HierarchicalGraph = ({
         getSectorColor,
         sectorCounts,
         sectorAngles,
-        animated,
-        svgRotationOffset,
-        tooltip
+        animated = false,
     ) => {
+        const rotationOffset = Math.PI / 2; // 0° at 3 o'clock
         const sectorsGroup = g.append("g").attr("class", `ring-${ringIndex}-sectors`);
 
-        if (transformStrategy === CoordinateTransforms.DECISION_TREE) {
-            (ring.points || []).forEach((node, nodeIndex) => {
-                if (node.angle < 0.0001) return;
-
-                const startAngleWithOffset = node.startAngle + svgRotationOffset;
-                const endAngleWithOffset = node.startAngle + node.angle + svgRotationOffset;
-
-                const sectorPath = sectorsGroup.append("path")
-                    .datum(node)
-                    .attr("d", d3.arc()
-                        .innerRadius(innerRadius)
-                        .outerRadius(outerRadius)
-                        .startAngle(startAngleWithOffset)
-                        .endAngle(endAngleWithOffset))
-                    .attr("fill", getSectorColor(ring, nodeIndex, ringIndex))
-                    .attr("stroke", "#fff")
-                    .attr("stroke-width", 0.5)
-                    .style("fill-opacity", 0.7)
-                    .on("mouseover", function (event, d_node) {
-                        d3.select(this).style("fill-opacity", 0.9);
-                        tooltip.style("visibility", "visible").html(
-                            `<strong>Node ${d_node.nodeId} (Lvl ${d_node.depth})</strong><br>` +
-                            `Samples: ${d_node.samples}<br>` +
-                            `Gini: ${d_node.giniImpurity.toFixed(3)}<br>` +
-                            `Majority: ${d_node.majorityClass || 'N/A'}<br>` +
-                            (d_node.feature ? `Split: ${d_node.feature} <= ${d_node.threshold.toFixed(2)}` : '<em>Leaf Node</em>')
-                        );
-                    })
-                    .on("mousemove", (event) => tooltip.style("top", (event.pageY + 10) + "px").style("left", (event.pageX + 10) + "px"))
-                    .on("mouseout", function () {
-                        d3.select(this).style("fill-opacity", 0.7);
-                        tooltip.style("visibility", "hidden");
-                    });
-
-                if (animated) {
-                    sectorPath
-                        .style("opacity", 0)
-                        .transition()
-                        .duration(800)
-                        .delay(ringIndex * 100 + nodeIndex * 30)
-                        .style("opacity", 1);
-                }
-            });
-        } else if (transformStrategy === CoordinateTransforms.RADIAL) {
-            const rotationOffset = 0;
+        if (transformStrategy === CoordinateTransforms.RADIAL) {
+            console.log(`Rendering ring ${ringIndex} outline for RADIAL mode`);
+            // Draw a single ring outline, 359° anticlockwise
             const ringPath = sectorsGroup.append("path")
                 .attr("d", d3.arc()
                     .innerRadius(innerRadius)
@@ -1226,7 +301,7 @@ const HierarchicalGraph = ({
                     .endAngle(rotationOffset + (359 * Math.PI / 180))
                 )
                 .attr("fill", "none")
-                .attr("stroke", getSectorColor(ring, 0, ringIndex))
+                .attr("stroke", getSectorColor(ringIndex, 0))
                 .attr("stroke-width", 2)
                 .attr("stroke-opacity", 0.5);
 
@@ -1238,7 +313,10 @@ const HierarchicalGraph = ({
                     .delay(ringIndex * 100)
                     .style("opacity", 1);
             }
-        } else {
+            return;
+        }
+
+        if (viewMode === 'normal') {
             const sectorsToRender = showEmptySectors ?
                 Array.from({ length: ring.sectors }, (_, i) => i) :
                 Array.from({ length: ring.sectors }, (_, i) => i).filter(i => (sectorCounts[i] || 0) > 0);
@@ -1247,8 +325,8 @@ const HierarchicalGraph = ({
 
             sectorsToRender.forEach((sectorIndex, displayIndex) => {
                 const actualIndex = showEmptySectors ? sectorIndex : displayIndex;
-                const startAngle = (anglePerSector * actualIndex) + svgRotationOffset;
-                const endAngle = (anglePerSector * (actualIndex + 1)) + svgRotationOffset;
+                const startAngle = (anglePerSector * actualIndex) + rotationOffset;
+                const endAngle = (anglePerSector * (actualIndex + 1)) + rotationOffset;
 
                 const sector = sectorsGroup.append("path")
                     .attr("d", d3.arc()
@@ -1257,7 +335,7 @@ const HierarchicalGraph = ({
                         .startAngle(startAngle)
                         .endAngle(endAngle)
                     )
-                    .attr("fill", getSectorColor(ring, sectorIndex, ringIndex))
+                    .attr("fill", getSectorColor(ringIndex, sectorIndex))
                     .style("cursor", "pointer")
                     .on("mouseover", function () {
                         d3.select(this).attr("fill-opacity", 0.6);
@@ -1275,10 +353,47 @@ const HierarchicalGraph = ({
                         .style("opacity", 1);
                 }
             });
+
+        } else if (viewMode === 'proportional' && sectorAngles) {
+            let currentAngle = rotationOffset;
+
+            sectorAngles.forEach((angle, sectorIndex) => {
+                if (!showEmptySectors && angle === 0) return;
+
+                const startAngle = currentAngle;
+                const endAngle = currentAngle + angle;
+
+                const sector = sectorsGroup.append("path")
+                    .attr("d", d3.arc()
+                        .innerRadius(innerRadius)
+                        .outerRadius(outerRadius)
+                        .startAngle(startAngle)
+                        .endAngle(endAngle)
+                    )
+                    .attr("fill", getSectorColor(ringIndex, sectorIndex))
+                    .style("cursor", "pointer")
+                    .on("mouseover", function () {
+                        d3.select(this).attr("fill-opacity", 0.6);
+                    })
+                    .on("mouseout", function () {
+                        d3.select(this).attr("fill-opacity", 0.3);
+                    });
+
+                if (animated) {
+                    sector
+                        .style("opacity", 0)
+                        .transition()
+                        .duration(800)
+                        .delay(ringIndex * 100 + sectorIndex * 50)
+                        .style("opacity", 1);
+                }
+
+                currentAngle = endAngle;
+            });
         }
     };
 
-    const drawEnhancedPoint = (g, point, x, y, ring, tooltip, labelsData, getLabelColor, pointIndex, animated, transformStrategy) => {
+    const drawEnhancedPoint = (g, point, x, y, ring, tooltip, labelsData, getLabelColor, pointIndex, animated) => {
         const pointIds = Array.isArray(point.Point_ID) ? point.Point_ID : [point.Point_ID];
         const isSelected = pointIds.some(id => selectedPoints.has(id));
 
@@ -1286,7 +401,7 @@ const HierarchicalGraph = ({
             .attr("cx", x)
             .attr("cy", y)
             .attr("r", isSelected ? 5 : 3)
-            .attr("fill", isSelected ? "#ff4444" : getLabelColor(point))
+            .attr("fill", isSelected ? "#ff4444" : getLabelColor(pointIds[0]) || "#333")
             .attr("stroke", isSelected ? "#fff" : "#fff")
             .attr("stroke-width", isSelected ? 2 : 0.25)
             .style("pointer-events", "visible")
@@ -1315,26 +430,22 @@ const HierarchicalGraph = ({
                 }
 
                 const labelText = associatedLabels.length > 0 ? associatedLabels.join(", ") : "No Label";
-                let htmlContent = `<strong>Point IDs:</strong> ${pointIdsStr}<br>` +
-                    `<strong>Position:</strong> (${x.toFixed(2)}, ${y.toFixed(2)})<br>`;
-
-                if (transformStrategy === CoordinateTransforms.DECISION_TREE) {
-                    htmlContent += `<strong>Ring/Level:</strong> ${ring.key} (Node ${point.nodeId || 'N/A'})<br>` +
-                        `<strong>Predicted Class:</strong> ${point.predicted_class || "N/A"}<br>`;
-                } else {
-                    htmlContent += `<strong>Subspace:</strong> ${ring.key}<br>` +
-                        `<strong>Transform:</strong> ${getTransformationInfo(point)}<br>` +
-                        `<strong>Ring:</strong> ${ring.subspaceId || 'N/A'}`;
-                }
-
-                htmlContent += `<strong>Labels:</strong> ${labelText}<br>`;
+                const transformInfo = getTransformationInfo(point);
 
                 tooltip
                     .style("visibility", "visible")
-                    .html(htmlContent);
+                    .html(
+                        `<strong>Point IDs:</strong> ${pointIdsStr}<br>` +
+                        `<strong>Position:</strong> (${x.toFixed(2)}, ${y.toFixed(2)})<br>` +
+                        `<strong>Subspace:</strong> ${ring.key}<br>` +
+                        `<strong>Labels:</strong> ${labelText}<br>` +
+                        `<strong>Transform:</strong> ${transformInfo}<br>` +
+                        `<strong>Ring:</strong> ${ring.subspaceId || 'N/A'}`
+                    );
 
                 setHoveredCoordinates({ ...point, label: labelText });
 
+                // Highlight effect
                 d3.select(event.currentTarget)
                     .transition()
                     .duration(200)
@@ -1350,6 +461,7 @@ const HierarchicalGraph = ({
                 tooltip.style("visibility", "hidden");
                 setHoveredCoordinates(null);
 
+                // Remove highlight effect
                 d3.select(event.currentTarget)
                     .transition()
                     .duration(200)
@@ -1380,6 +492,7 @@ const HierarchicalGraph = ({
                 const isHighlighted = selectedPoints.has(Number(pointId));
                 console.log(`Connecting point ID ${pointId}, positions: ${positions.length}`);
 
+                // Sort positions by ringIndex to ensure sequential connections
                 const sortedPositions = positions.sort((a, b) => a.ringIndex - b.ringIndex);
 
                 for (let i = 0; i < sortedPositions.length - 1; i++) {
@@ -1391,7 +504,7 @@ const HierarchicalGraph = ({
                         .attr("y1", startPos.y)
                         .attr("x2", endPos.x)
                         .attr("y2", endPos.y)
-                        .attr("stroke", isHighlighted ? "#ff4444" : getLabelColor(startPos.point))
+                        .attr("stroke", isHighlighted ? "#ff4444" : getLabelColor(pointId))
                         .attr("stroke-width", isHighlighted ? 2 : 1)
                         .attr("stroke-opacity", isHighlighted ? 0.9 : 0.6)
                         .attr("stroke-dasharray", isHighlighted ? "none" : "2,2")
@@ -1424,63 +537,12 @@ const HierarchicalGraph = ({
         });
     };
 
-    const drawDecisionTreeEdges = (containerG, treeStructure, maxRad, ringLayout, svgRotOffset, getRingColorFunc) => {
-        const edgesGroup = containerG.append("g").attr("class", "tree-edges").lower();
-        if (!treeStructure || !treeStructure.levels || !ringLayout) return;
-
-        treeStructure.levels.forEach((nodesInParentLevel, parentLevelIdx) => {
-            if (parentLevelIdx >= treeStructure.levels.length - 1) return;
-
-            const parentRingInfo = ringLayout[parentLevelIdx];
-            const childRingInfo = ringLayout[parentLevelIdx + 1];
-            if (!parentRingInfo || !childRingInfo) return;
-
-            const numTotalLevels = ringLayout.length;
-            const pInnerR = (parentLevelIdx / numTotalLevels) * maxRad;
-            const pOuterR = ((parentLevelIdx + 1) / numTotalLevels) * maxRad;
-            const parentCenterRadius = (pInnerR + pOuterR) / 2;
-
-            const cInnerR = ((parentLevelIdx + 1) / numTotalLevels) * maxRad;
-            const cOuterR = ((parentLevelIdx + 2) / numTotalLevels) * maxRad;
-            const childCenterRadius = (cInnerR + cOuterR) / 2;
-
-            nodesInParentLevel.forEach(parentNode => {
-                if (parentNode.isLeaf || (!parentNode.left && !parentNode.right)) return;
-
-                const parentBaseAngle = parentNode.startAngle + parentNode.angle / 2;
-                const parentPlotAngle = parentBaseAngle + svgRotOffset;
-                const parentX = parentCenterRadius * Math.cos(parentPlotAngle);
-                const parentY = parentCenterRadius * Math.sin(parentPlotAngle);
-
-                [parentNode.left, parentNode.right].forEach(childNodeReference => {
-                    if (childNodeReference) {
-                        const actualChildNode = childRingInfo.points.find(n => n.nodeId === childNodeReference.nodeId);
-                        if (actualChildNode && actualChildNode.angle > 0.0001) {
-                            const childBaseAngle = actualChildNode.startAngle + actualChildNode.angle / 2;
-                            const childPlotAngle = childBaseAngle + svgRotOffset;
-                            const childX = childCenterRadius * Math.cos(childPlotAngle);
-                            const childY = childCenterRadius * Math.sin(childPlotAngle);
-
-                            edgesGroup.append("line")
-                                .attr("x1", parentX)
-                                .attr("y1", parentY)
-                                .attr("x2", childX)
-                                .attr("y2", childY)
-                                .attr("stroke", getRingColorFunc(parentLevelIdx))
-                                .attr("stroke-width", 1.5)
-                                .attr("stroke-opacity", 0.4);
-                        }
-                    }
-                });
-            });
-        });
-    };
-
     const addZoomControls = (svg, zoom) => {
         const controlsGroup = svg.append("g")
             .attr("class", "zoom-controls")
-            .attr("transform", "translate(-380, -380)"); // Adjusted for centered viewBox
+            .attr("transform", "translate(20, 20)");
 
+        // Zoom in button
         controlsGroup.append("circle")
             .attr("cx", 0)
             .attr("cy", 0)
@@ -1499,6 +561,7 @@ const HierarchicalGraph = ({
             .style("font-size", "16px")
             .style("pointer-events", "none");
 
+        // Zoom out button
         controlsGroup.append("circle")
             .attr("cx", 0)
             .attr("cy", 50)
@@ -1519,6 +582,7 @@ const HierarchicalGraph = ({
             .style("font-size", "16px")
             .style("pointer-events", "none");
 
+        // Reset zoom button
         controlsGroup.append("circle")
             .attr("cx", 0)
             .attr("cy", 100)
@@ -1540,12 +604,12 @@ const HierarchicalGraph = ({
             .style("pointer-events", "none");
     };
 
-    const renderLinearStrips = (ringStructure, sectorCounts, getSectorColor) => {
+    const renderLinearStrips = (ringStructure, sectorCounts) => {
         const container = d3.select(stripsContainerRef.current);
         container.selectAll("*").remove();
 
         ringStructure.forEach((ring, ringIndex) => {
-            if (!ringVisibility[ring.key] && transformStrategy !== CoordinateTransforms.DECISION_TREE) return;
+            if (!ringVisibility[ring.key]) return;
 
             const stripDiv = container.append("div")
                 .style("margin-bottom", "20px")
@@ -1554,14 +618,10 @@ const HierarchicalGraph = ({
                 .style("border-radius", "4px")
                 .style("background-color", "#f9f9f9");
 
-            const titleText = transformStrategy === CoordinateTransforms.DECISION_TREE
-                ? `Level ${ringIndex}: ${ring.points.length} Nodes`
-                : `Ring ${String.fromCharCode(65 + ringIndex)}: ${ring.key} (${ring.points?.length || 0} points)`;
-
             stripDiv.append("h3")
                 .style("margin", "0 0 10px 0")
                 .style("font-size", "14px")
-                .text(titleText);
+                .text(`Ring ${String.fromCharCode(65 + ringIndex)}: ${ring.key} (${ring.points?.length || 0} points)`);
 
             const stripSvg = stripDiv.append("svg")
                 .attr("width", "100%")
@@ -1581,7 +641,7 @@ const HierarchicalGraph = ({
                     .attr("y", stripHeight - barHeight)
                     .attr("width", sectorWidth - 1)
                     .attr("height", barHeight)
-                    .attr("fill", getSectorColor(ring, sectorIndex, ringIndex))
+                    .attr("fill", count > 0 ? "#4CAF50" : "#ddd")
                     .attr("stroke", "#333")
                     .attr("stroke-width", 0.5);
 
@@ -1610,12 +670,13 @@ const HierarchicalGraph = ({
     const handleTransformOptionChange = (key, value) => {
         setTransformOptions(prev => ({
             ...prev,
-            [key]: (key.includes('Depth') || key.includes('Samples')) ? (parseInt(value) || 0) : (parseFloat(value) || 0)
+            [key]: parseFloat(value) || 0
         }));
     };
 
     return (
         <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
+            {/* Enhanced Control Panel */}
             <div style={{
                 marginBottom: "20px",
                 padding: "15px",
@@ -1623,6 +684,7 @@ const HierarchicalGraph = ({
                 borderRadius: "8px",
                 border: "1px solid #e9ecef"
             }}>
+                {/* View Mode Controls */}
                 <div style={{ marginBottom: "15px" }}>
                     <strong>View Mode:</strong>
                     <div style={{ display: "inline-block", marginLeft: "10px" }}>
@@ -1647,6 +709,7 @@ const HierarchicalGraph = ({
                     </div>
                 </div>
 
+                {/* Feature Toggles */}
                 <div style={{ marginBottom: "15px" }}>
                     <strong>Options:</strong>
                     {[
@@ -1673,6 +736,7 @@ const HierarchicalGraph = ({
                     ))}
                 </div>
 
+                {/* Transformation Strategy Controls */}
                 <div style={{ marginBottom: "10px" }}>
                     <strong>Coordinate Transform:</strong>
                     <select
@@ -1686,12 +750,14 @@ const HierarchicalGraph = ({
                             fontSize: "12px"
                         }}
                     >
-                        {Object.entries(CoordinateTransforms).map(([key, value]) => (
-                            <option key={value} value={value}>
-                                {value.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-                            </option>
-                        ))}
+                        <option value={CoordinateTransforms.POSITIVE_NEGATIVE}>Positive/Negative</option>
+                        <option value={CoordinateTransforms.Z_SCORE}>Z-Score</option>
+                        <option value={CoordinateTransforms.PERCENTILE}>Percentile</option>
+                        <option value={CoordinateTransforms.CUSTOM_THRESHOLD}>Custom Threshold</option>
+                        <option value={CoordinateTransforms.RADIAL}>Radial</option>
+                        <option value={CoordinateTransforms.DECISION_TREE}>DECISION TREE</option>
                     </select>
+
 
                     {(transformStrategy === CoordinateTransforms.Z_SCORE ||
                         transformStrategy === CoordinateTransforms.CUSTOM_THRESHOLD) && (
@@ -1721,63 +787,37 @@ const HierarchicalGraph = ({
                         </label>
                     )}
 
+
                     {transformStrategy === CoordinateTransforms.DECISION_TREE && (
-                        <span style={{ fontSize: "12px" }}>
-                            <label style={{ marginLeft: "15px" }}>
-                                Max Depth:
-                                <input
-                                    type="number"
-                                    min="1"
-                                    value={transformOptions.maxDepth}
-                                    onChange={(e) => handleTransformOptionChange('maxDepth', e.target.value)}
-                                    style={{ marginLeft: "5px", width: "60px", padding: "4px", fontSize: "12px" }}
-                                />
-                            </label>
-                            <label style={{ marginLeft: "15px" }}>
-                                Min Leaf:
-                                <input
-                                    type="number"
-                                    min="1"
-                                    value={transformOptions.minSamplesLeaf}
-                                    onChange={(e) => handleTransformOptionChange('minSamplesLeaf', e.target.value)}
-                                    style={{ marginLeft: "5px", width: "60px", padding: "4px", fontSize: "12px" }}
-                                />
-                            </label>
-                            <label style={{ marginLeft: "15px" }}>
-                                Min Split:
-                                <input
-                                    type="number"
-                                    min="2"
-                                    value={transformOptions.minSamplesSplit}
-                                    onChange={(e) => handleTransformOptionChange('minSamplesSplit', e.target.value)}
-                                    style={{ marginLeft: "5px", width: "60px", padding: "4px", fontSize: "12px" }}
-                                />
-                            </label>
-                        </span>
+                        <label style={{ marginLeft: "15px", fontSize: "12px" }}>
+                            Percentile:
+                            <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={transformOptions.percentile}
+                                onChange={(e) => handleTransformOptionChange('Decision', e.target.value)}
+                                style={{ marginLeft: "5px", width: "60px", padding: "4px", fontSize: "12px" }}
+                            />
+                        </label>
                     )}
+                   
+
                 </div>
 
+                {/* Status Info */}
                 <div style={{ fontSize: "11px", color: "#6c757d", marginTop: "10px" }}>
                     Selected Points: {selectedPoints.size} | Zoom: {(zoomLevel * 100).toFixed(0)}%
-                    {transformStrategy === CoordinateTransforms.DECISION_TREE && decisionTreeFullDataState && decisionTreeFullDataState.featureImportance && (
-                        <span style={{ marginLeft: "15px" }}>
-                            DT Feat. Import.: {
-                                Object.entries(decisionTreeFullDataState.featureImportance)
-                                    .filter(([, val]) => val > 0.001)
-                                    .sort(([, a], [, b]) => b - a)
-                                    .slice(0, 3)
-                                    .map(([k, v]) => `${k}:${v.toFixed(2)}`).join(', ')
-                            }
-                            {Object.entries(decisionTreeFullDataState.featureImportance).filter(([, val]) => val > 0.001).length > 3 ? '...' : ''}
-                        </span>
-                    )}
                 </div>
             </div>
 
+            {/* Main Visualization */}
             <div style={{ position: "relative" }}>
                 <svg ref={graphRef} style={{ width: "100%", height: "800px", border: "1px solid #ddd" }}></svg>
             </div>
 
+
+            {/* Linear Strip Visualizations */}
             <div style={{ marginTop: "20px" }}>
                 <h2 style={{ fontSize: "18px", marginBottom: "10px" }}>Linear Strip Visualizations</h2>
                 <div
@@ -1796,3 +836,4 @@ const HierarchicalGraph = ({
 };
 
 export default HierarchicalGraph;
+
