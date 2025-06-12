@@ -786,23 +786,6 @@ const HierarchicalGraph = ({
                             />
                         </label>
                     )}
-
-
-                    {transformStrategy === CoordinateTransforms.DECISION_TREE && (
-                        <label style={{ marginLeft: "15px", fontSize: "12px" }}>
-                            Percentile:
-                            <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                value={transformOptions.percentile}
-                                onChange={(e) => handleTransformOptionChange('Decision', e.target.value)}
-                                style={{ marginLeft: "5px", width: "60px", padding: "4px", fontSize: "12px" }}
-                            />
-                        </label>
-                    )}
-                   
-
                 </div>
 
                 {/* Status Info */}
