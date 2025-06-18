@@ -279,12 +279,12 @@ const App = () => {
           <div
             ref={subspaceLegendRef}
             className="w-full overflow-y-auto mb-4"
-            style={{ maxHeight: '20vh' }}
+            style={{ maxHeight: '120vh' }}
           />
           <div
             ref={legendRef}
             className="mt-4 overflow-y-auto"
-            style={{ maxHeight: '20vh' }}
+            style={{ maxHeight: '120vh' }}
           />
           {hoveredCoordinates && (
             <div className="p-2 bg-green-50 rounded text-sm w-full break-words">
