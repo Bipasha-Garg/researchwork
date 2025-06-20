@@ -22,8 +22,6 @@ class DecisionTreeNode {
         this.pointsInSector = [];
     }
 
-
-
     calculateClassDistribution(labelsData) {
         this.classCounts = {};
 
@@ -78,22 +76,17 @@ class DecisionTreeNode {
         return gini;
     }
 
-    // NEW: Set hierarchical sector angles
     setSectorAngles(startAngle, endAngle) {
         this.startAngle = startAngle;
         this.endAngle = endAngle;
         this.angleSpan = endAngle - startAngle;
     }
 
-    // NEW: Assign angular sectors to children hierarchically
     assignChildrenSectors() {
         const children = [this.left, this.right].filter(child => child !== null);
-
         if (children.length === 0) return;
 
-        // Divide the parent's angle span equally among children
         const anglePerChild = this.angleSpan / children.length;
-
         children.forEach((child, index) => {
             const childStartAngle = this.startAngle + (index * anglePerChild);
             const childEndAngle = childStartAngle + anglePerChild;
@@ -101,16 +94,13 @@ class DecisionTreeNode {
         });
     }
 
-    // Calculate sector properties for circular visualization
-    calculateSectorProperties(centerX = 0, centerY = 0, baseRadius = 50, maxRadius = 400, maxDepth = 5) {
-        // Scale radius based on depth
-        const radiusStep = (maxRadius - baseRadius) / (maxDepth + 1);
+    calculateSectorProperties(centerX = 0, centerY = 0, baseRadius = 50, maxRadius = 400, maxDepth) {
+        // Dynamically scale radius based on actual depth and maxDepth
+        const radiusStep = maxDepth > 0 ? (maxRadius - baseRadius) / (maxDepth + 1) : maxRadius;
         const innerRadius = this.depth === 0 ? 0 : baseRadius + ((this.depth - 1) * radiusStep);
         const outerRadius = baseRadius + (this.depth * radiusStep);
 
         this.radius = outerRadius;
-
-        // Calculate center position at the middle of the angular span
         const midAngle = this.startAngle + (this.angleSpan / 2);
         const midRadius = (innerRadius + outerRadius) / 2;
 
@@ -118,22 +108,20 @@ class DecisionTreeNode {
         this.y = centerY + Math.sin(midAngle) * midRadius;
 
         this.sector = {
-            innerRadius: innerRadius,
-            outerRadius: outerRadius,
+            innerRadius,
+            outerRadius,
             startAngle: this.startAngle,
             endAngle: this.endAngle,
             angleSpan: this.angleSpan,
             centerX: this.x,
             centerY: this.y,
-            midAngle: midAngle,
-            midRadius: midRadius
+            midAngle,
+            midRadius
         };
     }
 
-    // Assign points to sectors for visualization
     assignPointsToSector(allPoints) {
         this.pointsInSector = [];
-
         allPoints.forEach(point => {
             if (this.containsPoint(point)) {
                 const pointData = {
@@ -154,16 +142,12 @@ class DecisionTreeNode {
 
 export class DecisionTree {
     constructor(options = {}) {
-        this.maxDepth = options.maxDepth || 5;
-        this.minSamplesLeaf = options.minSamplesLeaf || 2;
-        this.minSamplesSplit = options.minSamplesSplit || 2;
         this.maxFeatures = options.maxFeatures || null;
         this.randomState = options.randomState || 42;
         this.root = null;
         this.nodeCounter = 0;
         this.levels = [];
         this.features = [];
-
         this.centerX = options.centerX || 0;
         this.centerY = options.centerY || 0;
         this.baseRadius = options.baseRadius || 50;
@@ -194,11 +178,12 @@ export class DecisionTree {
             return this;
         }
 
-        // NEW: Set up hierarchical sector assignment
         this._setupHierarchicalSectors();
         this._organizeLevels();
         this._createNodeToSectorMapping();
-        this._calculateCircularLayout();
+        // Calculate maxDepth dynamically based on actual tree depth
+        const maxDepth = Math.max(...this.allNodes.map(node => node.depth));
+        this._calculateCircularLayout(maxDepth);
         this._assignPointsToSectors(data);
 
         console.log(`Decision tree built with ${this.levels.length} levels`);
@@ -232,7 +217,7 @@ export class DecisionTree {
 
         console.log(`Node ${nodeId} at depth ${depth}: ${data.length} samples, Gini: ${node.giniImpurity.toFixed(3)}`);
 
-        if (this._shouldStop(node, depth)) {
+        if (this._shouldStop(node)) {
             node.isLeaf = true;
             console.log(`  -> Leaf node (class: ${node.majorityClass})`);
             return node;
@@ -265,12 +250,8 @@ export class DecisionTree {
         return node;
     }
 
-    _shouldStop(node, depth) {
-        return depth >= this.maxDepth ||
-            node.samples < this.minSamplesSplit ||
-            node.samples < this.minSamplesLeaf ||
-            node.giniImpurity === 0 ||
-            Object.keys(node.classCounts).length <= 1;
+    _shouldStop(node) {
+        return node.giniImpurity === 0 || Object.keys(node.classCounts).length <= 1;
     }
 
     _findBestSplit(data, labelsData) {
@@ -296,7 +277,7 @@ export class DecisionTree {
                 const leftData = data.filter(point => point[feature] <= threshold);
                 const rightData = data.filter(point => point[feature] > threshold);
 
-                if (leftData.length < this.minSamplesLeaf || rightData.length < this.minSamplesLeaf) {
+                if (leftData.length === 0 || rightData.length === 0) {
                     return;
                 }
 
@@ -346,77 +327,50 @@ export class DecisionTree {
 
     _createNodeToSectorMapping() {
         this.nodeToSectorMap = new Map();
-
         this.levels.forEach((nodes, depth) => {
             nodes.forEach((node, localIndex) => {
                 this.nodeToSectorMap.set(`${node.nodeId}-${depth}`, localIndex);
             });
         });
-
         console.log('Node to sector mapping created:', this.nodeToSectorMap);
     }
 
-    // NEW: Setup hierarchical sector assignment
     _setupHierarchicalSectors() {
         if (!this.root) return;
-
-        // Root gets the full circle (0 to 2π)
         this.root.setSectorAngles(0, 2 * Math.PI);
-
-        // Recursively assign sectors to children
         this._assignSectorsRecursively(this.root);
-
         console.log("Hierarchical sectors assigned successfully");
     }
 
-    // NEW: Recursively assign sectors to children
     _assignSectorsRecursively(node) {
         if (!node || node.isLeaf) return;
-
-        // Assign sectors to children based on parent's sector
         node.assignChildrenSectors();
-
-        // Recursively assign to grandchildren
-        if (node.left) {
-            this._assignSectorsRecursively(node.left);
-        }
-        if (node.right) {
-            this._assignSectorsRecursively(node.right);
-        }
+        if (node.left) this._assignSectorsRecursively(node.left);
+        if (node.right) this._assignSectorsRecursively(node.right);
     }
 
     _organizeLevels() {
         if (!this.root) return;
 
-        this.levels = Array(this.maxDepth + 1).fill().map(() => []);
-
+        this.levels = [];
         const queue = [{ node: this.root, depth: 0 }];
         while (queue.length > 0) {
             const { node, depth } = queue.shift();
-            if (depth <= this.maxDepth) {
-                this.levels[depth].push(node);
-            }
-            if (node.left) {
-                queue.push({ node: node.left, depth: depth + 1 });
-            }
-            if (node.right) {
-                queue.push({ node: node.right, depth: depth + 1 });
-            }
+            if (!this.levels[depth]) this.levels[depth] = [];
+            this.levels[depth].push(node);
+            if (node.left) queue.push({ node: node.left, depth: depth + 1 });
+            if (node.right) queue.push({ node: node.right, depth: depth + 1 });
         }
 
         console.log(`Organized levels: ${this.levels.map((level, i) => `Level ${i}: ${level.length} nodes`).join(', ')}`);
     }
 
-    // Calculate circular layout for visualization
-    _calculateCircularLayout() {
+    _calculateCircularLayout(maxDepth) {
         if (!this.levels || this.levels.length === 0) return;
 
         this.sectors = [];
-
-        // Calculate sector properties for each node
         this.allNodes.forEach(node => {
-            node.calculateSectorProperties(this.centerX, this.centerY, this.baseRadius, this.maxRadius, this.maxDepth);
-
+            node.calculateSectorProperties(this.centerX, this.centerY, this.baseRadius, this.maxRadius, maxDepth);
             this.sectors.push({
                 node,
                 depth: node.depth,
@@ -433,7 +387,6 @@ export class DecisionTree {
         console.log(`Calculated hierarchical layout for ${this.sectors.length} sectors`);
     }
 
-    // Assign points to sectors and track node assignments
     _assignPointsToSectors(data) {
         this.allNodes.forEach(node => {
             node.assignPointsToSector(data);
@@ -444,13 +397,11 @@ export class DecisionTree {
             let currentNode = this.root;
             let depth = 0;
 
-            while (currentNode && !currentNode.isLeaf && depth <= this.maxDepth) {
-                // Get the local sector index for this node at this depth
+            while (currentNode && !currentNode.isLeaf) {
                 const sectorIndex = this.nodeToSectorMap.get(`${currentNode.nodeId}-${currentNode.depth}`) || 0;
-
                 nodeAssignments.push({
                     nodeId: currentNode.nodeId,
-                    sectorIndex: sectorIndex, // ADD THIS
+                    sectorIndex,
                     depth: currentNode.depth,
                     feature: currentNode.feature,
                     threshold: currentNode.threshold,
@@ -474,12 +425,10 @@ export class DecisionTree {
             }
 
             if (currentNode) {
-                // Get the local sector index for the final node
                 const sectorIndex = this.nodeToSectorMap.get(`${currentNode.nodeId}-${currentNode.depth}`) || 0;
-
                 nodeAssignments.push({
                     nodeId: currentNode.nodeId,
-                    sectorIndex: sectorIndex, // ADD THIS
+                    sectorIndex,
                     depth: currentNode.depth,
                     feature: currentNode.feature,
                     threshold: currentNode.threshold,
@@ -500,7 +449,6 @@ export class DecisionTree {
         console.log(`Assigned ${this.transformedPoints.length} points to hierarchical sectors`);
     }
 
-    // Generate structure for circular visualization
     getCircularTreeStructure() {
         if (!this.root) {
             console.warn("No tree available to generate structure.");
@@ -601,9 +549,6 @@ export const transformDecisionTree = (points, options = {}) => {
     console.log(`Transforming ${points.length} points`);
 
     const tree = new DecisionTree({
-        maxDepth: options.maxDepth || 5,
-        minSamplesLeaf: options.minSamplesLeaf || 2,
-        minSamplesSplit: options.minSamplesSplit || 2,
         maxFeatures: options.maxFeatures || null,
         randomState: options.randomState || 42,
         labelsData: options.labelsData || null,
