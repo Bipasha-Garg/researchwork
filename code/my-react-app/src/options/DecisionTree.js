@@ -12,8 +12,6 @@ class DecisionTreeNode {
         this.classCounts = {};
         this.majorityClass = null;
         this.samples = data.length;
-
-        // Hierarchical sector properties
         this.startAngle = 0;
         this.endAngle = 2 * Math.PI;
         this.angleSpan = 2 * Math.PI;
@@ -23,6 +21,8 @@ class DecisionTreeNode {
         this.sector = null;
         this.pointsInSector = [];
     }
+
+
 
     calculateClassDistribution(labelsData) {
         this.classCounts = {};
@@ -197,6 +197,7 @@ export class DecisionTree {
         // NEW: Set up hierarchical sector assignment
         this._setupHierarchicalSectors();
         this._organizeLevels();
+        this._createNodeToSectorMapping();
         this._calculateCircularLayout();
         this._assignPointsToSectors(data);
 
@@ -343,6 +344,18 @@ export class DecisionTree {
         return shuffled.slice(0, this.maxFeatures);
     }
 
+    _createNodeToSectorMapping() {
+        this.nodeToSectorMap = new Map();
+
+        this.levels.forEach((nodes, depth) => {
+            nodes.forEach((node, localIndex) => {
+                this.nodeToSectorMap.set(`${node.nodeId}-${depth}`, localIndex);
+            });
+        });
+
+        console.log('Node to sector mapping created:', this.nodeToSectorMap);
+    }
+
     // NEW: Setup hierarchical sector assignment
     _setupHierarchicalSectors() {
         if (!this.root) return;
@@ -432,8 +445,12 @@ export class DecisionTree {
             let depth = 0;
 
             while (currentNode && !currentNode.isLeaf && depth <= this.maxDepth) {
+                // Get the local sector index for this node at this depth
+                const sectorIndex = this.nodeToSectorMap.get(`${currentNode.nodeId}-${currentNode.depth}`) || 0;
+
                 nodeAssignments.push({
                     nodeId: currentNode.nodeId,
+                    sectorIndex: sectorIndex, // ADD THIS
                     depth: currentNode.depth,
                     feature: currentNode.feature,
                     threshold: currentNode.threshold,
@@ -457,8 +474,12 @@ export class DecisionTree {
             }
 
             if (currentNode) {
+                // Get the local sector index for the final node
+                const sectorIndex = this.nodeToSectorMap.get(`${currentNode.nodeId}-${currentNode.depth}`) || 0;
+
                 nodeAssignments.push({
                     nodeId: currentNode.nodeId,
+                    sectorIndex: sectorIndex, // ADD THIS
                     depth: currentNode.depth,
                     feature: currentNode.feature,
                     threshold: currentNode.threshold,
