@@ -35,8 +35,7 @@ export const transformCoordinates = (points, strategy, options = {}) => {
             case CoordinateTransforms.RADIAL:
                 return transformRadial(points, options);
             case CoordinateTransforms.DECISION_TREE:
-                const result = transformDecisionTree(points, options);
-                return result.transformedPoints;
+                return transformDecisionTree(points, options);
             default:
                 console.warn(`Unknown transformation strategy: ${strategy}, using positive_negative`);
                 return transformPositiveNegative(points);
@@ -105,13 +104,11 @@ export const generateBitVector = (point, useTransformed = true, strategy = Coord
 // Enhanced sector index calculation with decision tree support
 export const calculateSectorIndex = (point, ringIndex, useTransformed = true, strategy = CoordinateTransforms.POSITIVE_NEGATIVE) => {
     if (strategy === CoordinateTransforms.DECISION_TREE) {
-        if (point.nodeAssignments && point.nodeAssignments[ringIndex]) {
-            const assignment = point.nodeAssignments[ringIndex];
-            return assignment.nodeId % (2 ** (ringIndex + 1));
+        if (point.nodeAssignments && point.nodeAssignments.find(a => a.depth === ringIndex)) {
+            return point.nodeAssignments.find(a => a.depth === ringIndex).nodeId;
         }
-        const sectors = 2 ** (ringIndex + 1);
-        const pointId = Array.isArray(point.Point_ID) ? point.Point_ID[0] : point.Point_ID;
-        return (point.Point_ID || 0) % sectors;
+        console.warn(`No node assignment for point ${point.Point_ID} at depth ${ringIndex}.`);
+        return 0;
     }
 
     const bitVector = generateBitVector(point, useTransformed, strategy);
@@ -146,7 +143,7 @@ export const calculateSectorPointCounts = (pointsData, transformStrategy, transf
                 pointsToCount = transformCoordinates(ringData.points, transformStrategy, transformOptions);
             }
 
-            const sectors = 2 ** (index + 1);
+            const sectors = ringData.sectors || 2 ** (index + 1);
             const counts = Array(sectors).fill(0);
 
             pointsToCount.forEach(point => {
@@ -299,39 +296,43 @@ export const calculateProportionalSectorAngles = (sectorCounts, showEmptySectors
 };
 
 export const generateRingStructure = (jsonData, transformStrategy = null, transformOptions = {}, labelsData = null) => {
+    if (!jsonData) {
+        console.error("No jsonData provided to generateRingStructure.");
+        return [];
+    }
     if (transformStrategy === CoordinateTransforms.DECISION_TREE) {
         console.log("=== GENERATING DECISION TREE RING STRUCTURE ===");
         const allPoints = Object.values(jsonData).flat();
         console.log(`Processing ${allPoints.length} points for decision tree`);
         const result = transformDecisionTree(allPoints, { ...transformOptions, labelsData });
         const { tree, transformedPoints } = result;
+        if (!tree || !tree.levels || tree.levels.length === 0) {
+            console.warn("No valid tree levels generated.");
+            return [];
+        }
+
         const rings = [];
-        for (let depth = 0; depth < tree.levels.length; depth++) {
-            const nodesAtDepth = tree.levels[depth];
-            const sectors = nodesAtDepth.length;
-            const pointsInRing = [];
-            nodesAtDepth.forEach((node, sectorIndex) => {
-                const pointsInSector = transformedPoints.filter(p => {
-                    if (!p.nodeAssignments || !p.nodeAssignments[depth]) return false;
-                    return p.nodeAssignments[depth].nodeId === node.nodeId;
-                });
-                pointsInSector.forEach(pt => {
-                    pt.sectorIndex = sectorIndex;
-                    if (!pt.nodeAssignments[depth]) {
-                        pt.nodeAssignments[depth] = { nodeId: node.nodeId, depth: depth };
-                    }
-                });
-                pointsInRing.push(...pointsInSector);
-            });
+        tree.levels.forEach((nodes, depth) => {
+            const sectors = nodes.length;
+            const pointsInRing = transformedPoints.filter(p => {
+                return p.nodeAssignments && p.nodeAssignments.some(assignment => assignment.depth === depth);
+            }).map(p => ({
+                ...p,
+                sectorIndex: p.nodeAssignments.find(assignment => assignment.depth === depth)?.nodeId
+            }));
+
             rings.push({
-                key: `TreeDepth${depth + 1}`,
+                key: `TreeDepth${depth}`,
                 points: pointsInRing,
                 dimensions: depth + 1,
-                subspaceId: `TreeDepth${depth + 1}`,
+                subspaceId: `TreeDepth${depth}`,
                 ringIndex: depth,
-                sectors
+                sectors,
+                structure: result.structure
             });
-        }
+        });
+
+        console.log(`Generated ${rings.length} rings with points: ${rings.map(r => r.points.length).join(', ')}`);
         return rings;
     }
 
@@ -386,7 +387,41 @@ export const calculatePointPositions = (
         const rotationOffset = 0;
         const positions = [];
 
-        if (transformStrategy === CoordinateTransforms.RADIAL) {
+        if (transformStrategy === CoordinateTransforms.DECISION_TREE) {
+            transformedPoints.forEach((point, pointIndex) => {
+                if (!point.nodeAssignments) {
+                    console.warn(`No nodeAssignments for point ${point.Point_ID}`);
+                    return;
+                }
+
+                const assignment = point.nodeAssignments.find(a => a.depth === ringIndex);
+                if (!assignment || !assignment.sector) {
+                    console.warn(`No valid assignment for point ${point.Point_ID} at depth ${ringIndex}`);
+                    return;
+                }
+
+                const sector = assignment.sector;
+                const nodeId = assignment.nodeId;
+
+                const radius = sector.innerRadius + (Math.random() * (sector.outerRadius - sector.innerRadius));
+                const angle = sector.startAngle + (Math.random() * (sector.endAngle - sector.startAngle));
+                const x = sector.centerX + Math.cos(angle) * radius;
+                const y = sector.centerY + Math.sin(angle) * radius;
+
+                if (isNaN(x) || isNaN(y)) {
+                    console.warn(`Invalid position for point ${point.Point_ID} at node ${nodeId}`);
+                    return;
+                }
+
+                positions.push({
+                    point,
+                    x,
+                    y,
+                    sectorIndex: nodeId,
+                    angle
+                });
+            });
+        } else if (transformStrategy === CoordinateTransforms.RADIAL) {
             const effectiveInnerRadius = ringIndex === 0 ? 20 : innerRadius;
             const effectiveOuterRadius = ringIndex === 0 ? 60 : outerRadius;
             const centralRadius = (effectiveInnerRadius + effectiveOuterRadius) / 2;
@@ -564,3 +599,5 @@ export {
     transformRadial,
     transformDecisionTree
 };
+
+

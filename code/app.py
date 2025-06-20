@@ -5,6 +5,7 @@ import logging
 import pandas as pd
 from datetime import datetime
 from variance import process_file
+# from gini import process_file
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -177,17 +178,17 @@ if __name__ == "__main__":
 #     try:
 #         if not os.path.exists(DATASET_PATH):
 #             return jsonify({"error": f"Default dataset not found at {DATASET_PATH}"}), 404
-        
+
 #         logging.debug(f"Processing default file: {DATASET_PATH}")
-        
+
 #         # Copy the default dataset to the uploads folder
 #         filename = "dataset.csv"
 #         upload_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-        
+
 #         # Read and save to ensure we have a copy in the uploads folder
 #         df = pd.read_csv(DATASET_PATH)
 #         df.to_csv(upload_path, index=False)
-        
+
 #         # Process file and get all results
 #         result = process_file_and_convert_to_json(
 #             upload_path, app.config["UPLOAD_FOLDER"], "data"
