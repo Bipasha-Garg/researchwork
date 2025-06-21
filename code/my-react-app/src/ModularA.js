@@ -25,7 +25,6 @@ const HierarchicalGraph = ({
     const [transformOptions, setTransformOptions] = useState({
         threshold: 0,
         percentile: 50,
-        // Removed fixed maxDepth, minSamplesLeaf, minSamplesSplit
     });
 
     const [selectedPoints, setSelectedPoints] = useState(new Set());
@@ -78,6 +77,7 @@ const HierarchicalGraph = ({
         const height = 800;
         const margin = 20;
         const maxRadius = Math.min(width, height) / 2 - margin;
+        const baseRadius = 50;
 
         svg
             .attr("width", width)
@@ -136,14 +136,38 @@ const HierarchicalGraph = ({
         const pointPositions = {};
         const ringLabels = ringStructure.map((_, i) => String.fromCharCode(65 + i));
 
+        console.log("perfect");
+        console.log(ringStructure.length);
+
+        const maxDepth = ringStructure.length - 1;
+        const radiusStep = maxDepth > 0 ? (maxRadius - baseRadius) / maxDepth : 0;
+    
         ringStructure.forEach((ring, index) => {
-            if (!ringVisibility[ring.key]) return;
+            // if (!ringVisibility[ring.key]) return;
 
             console.log(`\n--- Processing Ring ${index} (${ring.key}) ---`);
+            let innerRadius = 0;
+            let outerRadius = 0;
 
-            const innerRadius = (index / ringStructure.length) * maxRadius;
-            const outerRadius = ((index + 1) / ringStructure.length) * maxRadius;
+            if (transformStrategy === CoordinateTransforms.DECISION_TREE) {
+                // For decision tree, each ring should have consistent thickness
+                const ringThickness = maxDepth > 0 ? (maxRadius - baseRadius) / (maxDepth + 1) : maxRadius - baseRadius;
+                innerRadius = index === 0 ? baseRadius : baseRadius + (index * ringThickness);
+                outerRadius = baseRadius + ((index + 1) * ringThickness);
+            } else {
+                // For other transforms, divide space equally
+                const ringThickness = maxRadius / ringStructure.length;
+                innerRadius = index * ringThickness;
+                outerRadius = (index + 1) * ringThickness;
+            }
 
+            // Ensure we don't exceed maxRadius
+            innerRadius = Math.min(innerRadius, maxRadius - 10);
+            outerRadius = Math.min(outerRadius, maxRadius);
+
+            console.log(`Ring ${index}: innerRadius=${innerRadius}, outerRadius=${outerRadius}`);
+
+            console.log("working fine before ring sector render");
             renderRingSectors(
                 g,
                 ring,
@@ -155,11 +179,18 @@ const HierarchicalGraph = ({
                 sectorAngles ? sectorAngles[index] : null,
                 animationEnabled
             );
-
-            let ringLabelText = `${ringLabels[index]} (${ring.points?.length || 0} points)`;
+            console.log("working fine before label");
+            let ringLabelText;
             if (transformStrategy === CoordinateTransforms.DECISION_TREE) {
+                console.log("here ringlabel text");
+                console.log(ringStructure.points?.length);
                 ringLabelText = `Depth ${index} (${ring.points?.length || 0} points across ${ring.nodes?.length || 0} nodes)`;
+            } else {
+                console.log("this is working why?")
+                 ringLabelText = `${ringLabels[index]} (${ring.points?.length || 0} points)`;
+
             }
+
 
             const ringLabel = g
                 .append("text")
@@ -410,10 +441,10 @@ const HierarchicalGraph = ({
                         .attr("opacity", 0.3)
                         .style("cursor", "pointer")
                         .on("mouseover", function () {
-                            d3.select(this).attr("opacity", 0.6);
+                            d3.select(this).attr("opacity", 0.9);
                         })
                         .on("mouseout", function () {
-                            d3.select(this).attr("opacity", 0.3);
+                            d3.select(this).attr("opacity", 0.7);
                         });
 
                     if (animated) {
@@ -422,10 +453,11 @@ const HierarchicalGraph = ({
                             .transition()
                             .duration(800)
                             .delay(ringIndex * 100 + nodeIndex * 50)
-                            .style("opacity", 0.3);
+                            .style("opacity", 0.7);
                     }
                 });
             }
+            console.log("arriving end");
             return;
         }
 

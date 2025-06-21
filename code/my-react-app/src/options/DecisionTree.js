@@ -550,12 +550,12 @@ export const transformDecisionTree = (points, options = {}) => {
 
     const tree = new DecisionTree({
         maxFeatures: options.maxFeatures || null,
-        randomState: options.randomState || 42,
+        // randomState: options.randomState || 42,
         labelsData: options.labelsData || null,
         centerX: options.centerX || 0,
         centerY: options.centerY || 0,
-        baseRadius: options.baseRadius || 50,
-        maxRadius: options.maxRadius || 400
+        // baseRadius: options.baseRadius || 50,
+        // maxRadius: options.maxRadius || 400
     });
 
     tree.fit(points, options.labelsData);
