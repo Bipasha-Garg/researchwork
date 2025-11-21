@@ -23,9 +23,9 @@ class NpEncoder(json.JSONEncoder):
 def preprocess_csv(file_path, output_file):
     try:
         df = pd.read_csv(file_path)
-        id_columns = [col for col in df.columns if col.lower() in ["id", "identifier"]]
+        id_columns = [col for col in df.columns if col.lower() in ["id", "identifier","unique_id"]]
         df = df.drop(columns=id_columns, errors="ignore")
-        df = df.dropna()
+        df = df.dropna().reset_index(drop=True)
 
         label_column = df.columns[-1]
         feature_columns = df.columns[:-1]

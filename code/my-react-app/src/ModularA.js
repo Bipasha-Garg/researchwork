@@ -9,18 +9,139 @@ import {
     calculatePointPositions,
 } from "./ModularB";
 
+const downloadSVG = (svgElement, filename = "visualization.svg") => {
+    const svgData = new XMLSerializer().serializeToString(svgElement);
+    const blob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+
+    URL.revokeObjectURL(url);
+};
+
+function downloadPNG(svgNode) {
+    const svgString = new XMLSerializer().serializeToString(svgNode);
+
+    // Fix: Encode SVG with UTF-8 safe method
+    const svg64 = window.btoa(unescape(encodeURIComponent(svgString)));
+    const image64 = "data:image/svg+xml;base64," + svg64;
+
+    const img = new Image();
+    img.onload = function () {
+        const canvas = document.createElement("canvas");
+        canvas.width = svgNode.clientWidth * 2;   // higher resolution
+        canvas.height = svgNode.clientHeight * 2;
+        const ctx = canvas.getContext("2d");
+
+        // white background for PNG
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        const png = canvas.toDataURL("image/png");
+
+        const link = document.createElement("a");
+        link.download = "visualization.png";
+        link.href = png;
+        link.click();
+    };
+
+    img.src = image64;
+}
+
+
+// const downloadEPS = (svgElement, filename = "visualization.eps") => {
+//     alert("EPS export not implemented yet.");
+// };
+function downloadEPS(svgNode) {
+    if (!svgNode) {
+        console.error("No SVG found for EPS export.");
+        return;
+    }
+
+    // Serialize the SVG
+    const svgString = new XMLSerializer().serializeToString(svgNode);
+
+    // EPS header (PostScript wrapper)
+    const epsHeader = `%!PS-Adobe-3.0 EPSF-3.0
+%%Creator: React-D3 Visualization
+%%Title: Exported Visualization
+%%Pages: 1
+%%BoundingBox: 0 0 ${svgNode.clientWidth} ${svgNode.clientHeight}
+%%EndComments
+
+`;
+
+    // Convert SVG into EPS-compatible representation
+    // We embed the SVG XML directly inside the EPS file as a string.
+    const epsContent =
+        epsHeader +
+        "%%BeginDocument: SVG\n" +
+        svgString +
+        "\n%%EndDocument\n%%EOF";
+
+    // Create blob
+    const blob = new Blob([epsContent], {
+        type: "application/postscript"
+    });
+
+    // Trigger download
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "visualization.eps";
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+
+
+const btnStyleBlue = {
+    background: "#007bff",
+    color: "white",
+    padding: "6px 12px",
+    borderRadius: "4px",
+    border: "none",
+    cursor: "pointer",
+    marginRight: "10px",
+};
+
+const btnStyleGreen = {
+    background: "#28a745",
+    color: "white",
+    padding: "6px 12px",
+    borderRadius: "4px",
+    border: "none",
+    cursor: "pointer",
+    marginRight: "10px",
+};
+
+const btnStylePurple = {
+    background: "#6f42c1",
+    color: "white",
+    padding: "6px 12px",
+    borderRadius: "4px",
+    border: "none",
+    cursor: "pointer",
+    marginRight: "10px",
+};
+
 const HierarchicalGraph = ({
     jsonData,
     labelsData,
     setHoveredCoordinates,
-    ringVisibility,
+    ringVisibility
 }) => {
     const graphRef = useRef(null);
     const stripsContainerRef = useRef(null);
     const [viewMode, setViewMode] = useState("normal");
     const [showEmptySectors, setShowEmptySectors] = useState(true);
     const [transformStrategy, setTransformStrategy] = useState(
-        CoordinateTransforms.DECISION_TREE
+        CoordinateTransforms.POSITIVE_NEGATIVE
     );
     const [transformOptions, setTransformOptions] = useState({
         threshold: 0,
@@ -202,7 +323,7 @@ const HierarchicalGraph = ({
                 .attr("font-weight", "bold")
                 .attr("stroke", "white")
                 .attr("stroke-width", "0.5")
-                .text(ringLabelText);
+                // .text(ringLabelText);
 
             if (animationEnabled) {
                 ringLabel
@@ -724,69 +845,69 @@ const HierarchicalGraph = ({
             .attr("class", "zoom-controls")
             .attr("transform", "translate(20, 20)");
 
-        controlsGroup
-            .append("circle")
-            .attr("cx", 0)
-            .attr("cy", 0)
-            .attr("r", 20)
-            .attr("fill", "rgba(255,255,255,0.8)")
-            .attr("stroke", "#333")
-            .style("cursor", "pointer")
-            .on("click", () => {
-                svg.transition().call(zoom.scaleBy, 1.5);
-            });
+        // controlsGroup
+        //     .append("circle")
+        //     .attr("cx", 0)
+        //     .attr("cy", 0)
+        //     .attr("r", 20)
+        //     .attr("fill", "rgba(255,255,255,0.8)")
+        //     .attr("stroke", "#333")
+        //     .style("cursor", "pointer")
+        //     .on("click", () => {
+        //         svg.transition().call(zoom.scaleBy, 1.5);
+        //     });
 
-        controlsGroup
-            .append("text")
-            .attr("text-anchor", "middle")
-            .attr("dy", "0.35em")
-            .text("+")
-            .style("font-size", "16px")
-            .style("pointer-events", "none");
+        // controlsGroup
+        //     .append("text")
+        //     .attr("text-anchor", "middle")
+        //     .attr("dy", "0.35em")
+        //     .text("+")
+        //     .style("font-size", "16px")
+        //     .style("pointer-events", "none");
 
-        controlsGroup
-            .append("circle")
-            .attr("cx", 0)
-            .attr("cy", 50)
-            .attr("r", 20)
-            .attr("fill", "rgba(255,255,255,0.8)")
-            .attr("stroke", "#333")
-            .style("cursor", "pointer")
-            .on("click", () => {
-                svg.transition().call(zoom.scaleBy, 0.67);
-            });
+        // controlsGroup
+        //     .append("circle")
+        //     .attr("cx", 0)
+        //     .attr("cy", 50)
+        //     .attr("r", 20)
+        //     .attr("fill", "rgba(255,255,255,0.8)")
+        //     .attr("stroke", "#333")
+        //     .style("cursor", "pointer")
+        //     .on("click", () => {
+        //         svg.transition().call(zoom.scaleBy, 0.67);
+        //     });
 
-        controlsGroup
-            .append("text")
-            .attr("x", 0)
-            .attr("y", 50)
-            .attr("text-anchor", "middle")
-            .attr("dy", "0.35em")
-            .text("−")
-            .style("font-size", "16px")
-            .style("pointer-events", "none");
+        // controlsGroup
+        //     .append("text")
+        //     .attr("x", 0)
+        //     .attr("y", 50)
+        //     .attr("text-anchor", "middle")
+        //     .attr("dy", "0.35em")
+        //     .text("−")
+        //     .style("font-size", "16px")
+        //     .style("pointer-events", "none");
 
-        controlsGroup
-            .append("circle")
-            .attr("cx", 0)
-            .attr("cy", 100)
-            .attr("r", 20)
-            .attr("fill", "rgba(255,255,255,0.8)")
-            .attr("stroke", "#333")
-            .style("cursor", "pointer")
-            .on("click", () => {
-                svg.transition().call(zoom.transform, d3.zoomIdentity);
-            });
+        // controlsGroup
+        //     .append("circle")
+        //     .attr("cx", 0)
+        //     .attr("cy", 100)
+        //     .attr("r", 20)
+        //     .attr("fill", "rgba(255,255,255,0.8)")
+        //     .attr("stroke", "#333")
+        //     .style("cursor", "pointer")
+        //     .on("click", () => {
+        //         svg.transition().call(zoom.transform, d3.zoomIdentity);
+        //     });
 
-        controlsGroup
-            .append("text")
-            .attr("x", 0)
-            .attr("y", 100)
-            .attr("text-anchor", "middle")
-            .attr("dy", "0.35em")
-            .text("⌂")
-            .style("font-size", "12px")
-            .style("pointer-events", "none");
+    //     controlsGroup
+    //         .append("text")
+    //         .attr("x", 0)
+    //         .attr("y", 100)
+    //         .attr("text-anchor", "middle")
+    //         .attr("dy", "0.35em")
+    //         .text("⌂")
+    //         .style("font-size", "12px")
+    //         .style("pointer-events", "none");
     };
 
     const renderLinearStrips = (ringStructure, sectorCounts) => {
@@ -889,6 +1010,23 @@ const HierarchicalGraph = ({
         <div
             style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}
         >
+            
+
+            {/* <div style={{ marginTop: "20px" }}>
+                <h2 style={{ fontSize: "18px", marginBottom: "10px" }}>
+                    Linear Strip Visualizations
+                </h2>
+                <div
+                    ref={stripsContainerRef}
+                    style={{
+                        maxHeight: "500px",
+                        overflowY: "auto",
+                        border: "1px solid #ddd",
+                        borderRadius: "4px",
+                        padding: "10px",
+                    }}
+                ></div>
+            </div> */}
             <div
                 style={{
                     marginBottom: "20px",
@@ -1022,12 +1160,23 @@ const HierarchicalGraph = ({
                     )}
                 </div>
 
-                <div
+                {/* <div
                     style={{ fontSize: "11px", color: "#6c757d", marginTop: "10px" }}
                 >
                     Selected Points: {selectedPoints.size} | Zoom:{" "}
                     {(zoomLevel * 100).toFixed(0)}%
-                </div>
+                </div> */}
+            </div>
+            <div style={{ marginBottom: "15px", display: "flex", gap: "10px" }}>
+                <button onClick={() => downloadSVG(graphRef.current)} style={btnStyleBlue}>
+                    Download SVG
+                </button>
+                <button onClick={() => downloadPNG(graphRef.current)} style={btnStyleGreen}>
+                    Download PNG
+                </button>
+                <button onClick={() => downloadEPS(graphRef.current)} style={btnStylePurple}>
+                    Download EPS
+                </button>
             </div>
 
             <div style={{ position: "relative" }}>
@@ -1037,7 +1186,7 @@ const HierarchicalGraph = ({
                 ></svg>
             </div>
 
-            <div style={{ marginTop: "20px" }}>
+            {/* <div style={{ marginTop: "20px" }}>
                 <h2 style={{ fontSize: "18px", marginBottom: "10px" }}>
                     Linear Strip Visualizations
                 </h2>
@@ -1051,7 +1200,7 @@ const HierarchicalGraph = ({
                         padding: "10px",
                     }}
                 ></div>
-            </div>
+            </div> */}
         </div>
     );
 };

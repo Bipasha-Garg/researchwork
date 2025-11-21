@@ -1,0 +1,21 @@
+       <button
+            onClick={handleSaveVisualization}
+            disabled={!jsonData}
+            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded mb-4 w-48 text-sm sm:text-base disabled:bg-gray-400 self-end"
+          >
+            💾 Save Visualization
+          </button>
+
+
+
+   <button
+            onClick={handleSaveVisualization}
+            disabled={!jsonData}
+            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded mb-4 w-48 text-sm sm:text-base disabled:bg-gray-400 self-end"
+          >
+            💾 Save Visualization
+          </button>
+
+
+
+import domtoimage from 'dom-to-image';

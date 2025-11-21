@@ -1,7 +1,7 @@
 class DecisionTreeNode {
     constructor(data, depth = 0, nodeId = 0) {
         this.nodeId = nodeId;
-        this.depth = depth;
+        // this.depth = depth;
         this.data = data;
         this.feature = null;
         this.threshold = null;
@@ -421,7 +421,7 @@ export class DecisionTree {
                 } else {
                     currentNode = currentNode.right;
                 }
-                depth++;
+                // depth++;
             }
 
             if (currentNode) {

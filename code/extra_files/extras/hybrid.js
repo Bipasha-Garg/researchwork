@@ -705,7 +705,7 @@ const HierarchicalGraph = ({ jsonData, labelsData, setHoveredCoordinates, ringVi
 
             <div style={{ marginTop: "20px" }}>
                 <h2 style={{ fontSize: "18px", marginBottom: "10px" }}>Linear Strip Visualizations</h2>
-                <div
+                {/* <div
                     ref={stripsContainerRef}
                     style={{
                         maxHeight: "500px",
@@ -714,7 +714,7 @@ const HierarchicalGraph = ({ jsonData, labelsData, setHoveredCoordinates, ringVi
                         borderRadius: "4px",
                         padding: "10px"
                     }}
-                ></div>
+                ></div> */}
             </div>
         </div>
     );
