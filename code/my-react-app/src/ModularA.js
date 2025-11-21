@@ -8,96 +8,9 @@ import {
     generateColorSchemes,
     calculatePointPositions,
 } from "./ModularB";
-
-const downloadSVG = (svgElement, filename = "visualization.svg") => {
-    const svgData = new XMLSerializer().serializeToString(svgElement);
-    const blob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    link.click();
-
-    URL.revokeObjectURL(url);
-};
-
-function downloadPNG(svgNode) {
-    const svgString = new XMLSerializer().serializeToString(svgNode);
-
-    // Fix: Encode SVG with UTF-8 safe method
-    const svg64 = window.btoa(unescape(encodeURIComponent(svgString)));
-    const image64 = "data:image/svg+xml;base64," + svg64;
-
-    const img = new Image();
-    img.onload = function () {
-        const canvas = document.createElement("canvas");
-        canvas.width = svgNode.clientWidth * 2;   // higher resolution
-        canvas.height = svgNode.clientHeight * 2;
-        const ctx = canvas.getContext("2d");
-
-        // white background for PNG
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-        const png = canvas.toDataURL("image/png");
-
-        const link = document.createElement("a");
-        link.download = "visualization.png";
-        link.href = png;
-        link.click();
-    };
-
-    img.src = image64;
-}
-
-
-// const downloadEPS = (svgElement, filename = "visualization.eps") => {
-//     alert("EPS export not implemented yet.");
-// };
-function downloadEPS(svgNode) {
-    if (!svgNode) {
-        console.error("No SVG found for EPS export.");
-        return;
-    }
-
-    // Serialize the SVG
-    const svgString = new XMLSerializer().serializeToString(svgNode);
-
-    // EPS header (PostScript wrapper)
-    const epsHeader = `%!PS-Adobe-3.0 EPSF-3.0
-%%Creator: React-D3 Visualization
-%%Title: Exported Visualization
-%%Pages: 1
-%%BoundingBox: 0 0 ${svgNode.clientWidth} ${svgNode.clientHeight}
-%%EndComments
-
-`;
-
-    // Convert SVG into EPS-compatible representation
-    // We embed the SVG XML directly inside the EPS file as a string.
-    const epsContent =
-        epsHeader +
-        "%%BeginDocument: SVG\n" +
-        svgString +
-        "\n%%EndDocument\n%%EOF";
-
-    // Create blob
-    const blob = new Blob([epsContent], {
-        type: "application/postscript"
-    });
-
-    // Trigger download
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "visualization.eps";
-    a.click();
-    URL.revokeObjectURL(url);
-}
-
+import downloadSVG from "./download";
+import downloadPNG from "./download";
+import downloadEPS from "./download";
 
 
 const btnStyleBlue = {
@@ -319,11 +232,11 @@ const HierarchicalGraph = ({
                 .attr("y", -outerRadius - 10)
                 .attr("text-anchor", "middle")
                 .attr("font-size", "14px")
-                .attr("fill", getRingColor(index))
+                .attr("fill", "black")
                 .attr("font-weight", "bold")
                 .attr("stroke", "white")
                 .attr("stroke-width", "0.5")
-                // .text(ringLabelText);
+                .text(ringLabelText);
 
             if (animationEnabled) {
                 ringLabel
@@ -526,7 +439,8 @@ const HierarchicalGraph = ({
                 )
                 .attr("fill", "none")
                 .attr("stroke", getSectorColor(ringIndex, 0))
-                .attr("stroke-width", 2)
+                .attr("stroke", "#000") // <--- ADD/UPDATE THIS LINE
+                .attr("stroke-width", 0.5)
                 .attr("stroke-opacity", 0.5);
 
             if (animated) {
@@ -559,7 +473,9 @@ const HierarchicalGraph = ({
                                 .endAngle(endAngle)
                         )
                         .attr("fill", getSectorColor(ringIndex, nodeIndex % sectorCounts.length))
-                        .attr("opacity", 0.3)
+                        .attr("opacity", 0.7)
+                        .attr("stroke", "#000") // <--- ADD/UPDATE THIS LINE
+                        .attr("stroke-width", 0.5)
                         .style("cursor", "pointer")
                         .on("mouseover", function () {
                             d3.select(this).attr("opacity", 0.9);
@@ -610,11 +526,14 @@ const HierarchicalGraph = ({
                     )
                     .attr("fill", getSectorColor(ringIndex, sectorIndex))
                     .style("cursor", "pointer")
+                    .attr("opacity", 0.7)
+                    .attr("stroke", "#000") // <--- ADD/UPDATE THIS LINE
+                    .attr("stroke-width", 0.5)
                     .on("mouseover", function () {
-                        d3.select(this).attr("fill-opacity", 0.6);
+                        d3.select(this).attr("fill-opacity", 0.7);
                     })
                     .on("mouseout", function () {
-                        d3.select(this).attr("fill-opacity", 0.3);
+                        d3.select(this).attr("fill-opacity",1 );
                     });
 
                 if (animated) {
@@ -648,6 +567,8 @@ const HierarchicalGraph = ({
                     )
                     .attr("fill", getSectorColor(ringIndex, sectorIndex))
                     .style("cursor", "pointer")
+                    .attr("stroke", "#000") // <--- ADD/UPDATE THIS LINE
+                    .attr("stroke-width", 0.5)
                     .on("mouseover", function () {
                         d3.select(this).attr("fill-opacity", 0.6);
                     })

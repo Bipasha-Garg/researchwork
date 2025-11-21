@@ -407,15 +407,39 @@ export const generateRingStructure = (jsonData, transformStrategy = null, transf
 };
 
 // Color scheme generation
-export const generateColorSchemes = (ringCount) => {
-    const ringColorScale = d3.scaleSequential(d3.interpolatePlasma).domain([ringCount, 0]);
+// export const generateColorSchemes = (ringCount) => {
+//     const ringColorScale = d3.scaleSequential(d3.interpolatePlasma).domain([ringCount, 0]);
 
-    const getRingColor = (index) => d3.color(ringColorScale(index));
+//     const getRingColor = (index) => d3.color(ringColorScale(index));
+
+//     const getSectorColor = (ringIndex, sectorIndex) => {
+//         const baseColor = d3.hsl(getRingColor(ringIndex));
+//         const isPositive = sectorIndex % 2 === 0;
+//         return d3.hsl(baseColor.h, baseColor.s, isPositive ? 0.75 : 0.35).toString();
+//     };
+
+//     return { getRingColor, getSectorColor };
+// };
+
+export const generateColorSchemes = (ringCount) => {
+    // 1. Keep ring color same for all the rings, and make it whitish yellowish.
+    // We'll use a fixed color, such as a light yellow/gold.
+    const fixedRingColor = "#f6e9a8"; // A light, slightly yellow/gold color
+
+    // The getRingColor function now returns the fixed color regardless of the index.
+    const getRingColor = (index) => fixedRingColor;
+
+    // 2. The sector saturation should remain same as dark and light.
+    // We use the fixed color as the base for sector calculation.
+    const baseColorForSectors = d3.hsl(fixedRingColor);
 
     const getSectorColor = (ringIndex, sectorIndex) => {
-        const baseColor = d3.hsl(getRingColor(ringIndex));
+        // baseColor remains the fixed yellow/gold, ensuring all rings use the same base hue/saturation
         const isPositive = sectorIndex % 2 === 0;
-        return d3.hsl(baseColor.h, baseColor.s, isPositive ? 0.75 : 0.35).toString();
+
+        // The logic for dark (0.35) and light (0.75) sectors is preserved.
+        // We use the hue and saturation of the fixed color, but vary the lightness (l).
+        return d3.hsl(baseColorForSectors.h, baseColorForSectors.s, isPositive ? 0.90 : 0.80).toString();
     };
 
     return { getRingColor, getSectorColor };
