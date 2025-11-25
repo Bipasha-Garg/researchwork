@@ -589,7 +589,7 @@ export const calculatePointPositions = (
 
                         // Angle variation within sector
                         const sectorWidth = sector.endAngle - sector.startAngle;
-                        const maxAngleSpread = Math.min(sectorWidth * 0.8, Math.PI / 6); // Limit spread
+                        const maxAngleSpread = Math.min(sectorWidth * 0.9, Math.PI / 6); // Limit spread
 
                         if (pointsPerLayer > 1) {
                             const angleOffset = (positionInLayer / (pointsPerLayer - 1) - 0.5) * maxAngleSpread;

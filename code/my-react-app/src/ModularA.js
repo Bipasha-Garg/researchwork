@@ -8,9 +8,98 @@ import {
     generateColorSchemes,
     calculatePointPositions,
 } from "./ModularB";
-import downloadSVG from "./download";
-import downloadPNG from "./download";
-import downloadEPS from "./download";
+// import downloadSVG from "./download";
+// import downloadPNG from "./download";
+// import downloadEPS from "./download";
+
+// CHANGE: Export the download functions to resolve Webpack module confusion.
+export const downloadSVG = (svgElement, filename = "visualization.svg") => {
+    const svgData = new XMLSerializer().serializeToString(svgElement);
+    const blob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+
+    URL.revokeObjectURL(url);
+};
+
+// CHANGE: Export the download functions to resolve Webpack module confusion.
+export function downloadPNG(svgNode) {
+    const svgString = new XMLSerializer().serializeToString(svgNode);
+
+    // Fix: Encode SVG with UTF-8 safe method
+    const svg64 = window.btoa(unescape(encodeURIComponent(svgString)));
+    const image64 = "data:image/svg+xml;base64," + svg64;
+
+    const img = new Image();
+    img.onload = function () {
+        const canvas = document.createElement("canvas");
+        canvas.width = svgNode.clientWidth * 2;   // higher resolution
+        canvas.height = svgNode.clientHeight * 2;
+        const ctx = canvas.getContext("2d");
+
+        // white background for PNG
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        const png = canvas.toDataURL("image/png");
+
+        const link = document.createElement("a");
+        link.download = "visualization.png";
+        link.href = png;
+        link.click();
+    };
+
+    img.src = image64;
+}
+
+
+// CHANGE: Export the download functions to resolve Webpack module confusion.
+export function downloadEPS(svgNode) {
+    if (!svgNode) {
+        console.error("No SVG found for EPS export.");
+        return;
+    }
+
+    // Serialize the SVG
+    const svgString = new XMLSerializer().serializeToString(svgNode);
+
+    // EPS header (PostScript wrapper)
+    const epsHeader = `%!PS-Adobe-3.0 EPSF-3.0
+%%Creator: React-D3 Visualization
+%%Title: Exported Visualization
+%%Pages: 1
+%%BoundingBox: 0 0 ${svgNode.clientWidth} ${svgNode.clientHeight}
+%%EndComments
+
+`;
+
+    // Convert SVG into EPS-compatible representation
+    // We embed the SVG XML directly inside the EPS file as a string.
+    const epsContent =
+        epsHeader +
+        "%%BeginDocument: SVG\n" +
+        svgString +
+        "\n%%EndDocument\n%%EOF";
+
+    // Create blob
+    const blob = new Blob([epsContent], {
+        type: "application/postscript"
+    });
+
+    // Trigger download
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "visualization.eps";
+    a.click();
+    URL.revokeObjectURL(url);
+}
 
 
 const btnStyleBlue = {
@@ -221,10 +310,13 @@ const HierarchicalGraph = ({
                 ringLabelText = `Depth ${index} (${ring.points?.length || 0} points across ${ring.nodes?.length || 0} nodes)`;
             } else {
                 console.log("this is working why?")
-                 ringLabelText = `${ringLabels[index]} (${ring.points?.length || 0} points)`;
+                //  ringLabelText = `${ringLabels[index]} (${ring.points?.length || 0} points)`;
+                ringLabelText = `${ringLabels[index]}`;
 
             }
 
+
+            // ModularA.js, inside ringStructure.forEach:
 
             const ringLabel = g
                 .append("text")
@@ -232,11 +324,14 @@ const HierarchicalGraph = ({
                 .attr("y", -outerRadius - 10)
                 .attr("text-anchor", "middle")
                 .attr("font-size", "14px")
-                .attr("fill", "black")
+                .attr("fill", "#000000")       // 1. Explicitly set Fill (Black)
+                .attr("stroke", "none")        // 2. Explicitly set Stroke to NONE
+                .attr("stroke-width", 0)       // 3. Set Stroke Width to ZERO for safety
                 .attr("font-weight", "bold")
-                .attr("stroke", "white")
-                .attr("stroke-width", "0.5")
+                .style("fill", "#000000")      // 4. Use CSS style to double-enforce Fill
+                .style("opacity", 1)
                 .text(ringLabelText);
+            // ...
 
             if (animationEnabled) {
                 ringLabel
@@ -569,11 +664,12 @@ const HierarchicalGraph = ({
                     .style("cursor", "pointer")
                     .attr("stroke", "#000") // <--- ADD/UPDATE THIS LINE
                     .attr("stroke-width", 0.5)
+                    .attr("opacity", 0.7)
                     .on("mouseover", function () {
-                        d3.select(this).attr("fill-opacity", 0.6);
+                        d3.select(this).attr("fill-opacity", 0.7);
                     })
                     .on("mouseout", function () {
-                        d3.select(this).attr("fill-opacity", 0.3);
+                        d3.select(this).attr("fill-opacity", 1);
                     });
 
                 if (animated) {
@@ -611,7 +707,7 @@ const HierarchicalGraph = ({
             .append("circle")
             .attr("cx", x)
             .attr("cy", y)
-            .attr("r", isSelected ? 5 : 3)
+            .attr("r", isSelected ? 5 : 5)
             .attr("fill", isSelected ? "#ff4444" : getLabelColor(pointIds[0]) || "#333")
             .attr("stroke", isSelected ? "#fff" : "#fff")
             .attr("stroke-width", isSelected ? 2 : 0.25)
@@ -675,7 +771,7 @@ const HierarchicalGraph = ({
                 d3.select(event.currentTarget)
                     .transition()
                     .duration(200)
-                    .attr("r", isSelected ? 5 : 3)
+                    .attr("r", isSelected ? 5 : 4)
                     .attr("stroke-width", isSelected ? 2 : 0.25);
             });
 
@@ -687,7 +783,7 @@ const HierarchicalGraph = ({
                 .duration(600)
                 .delay(pointIndex * 20)
                 .style("opacity", 1)
-                .attr("r", isSelected ? 5 : 3);
+                .attr("r", isSelected ? 5 : 4);
         }
     };
 

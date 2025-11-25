@@ -1,5 +1,5 @@
-
-const downloadSVG = (svgElement, filename = "visualization.svg") => {
+// CHANGE: Export the download functions to resolve Webpack module confusion.
+export const downloadSVG = (svgElement, filename = "visualization.svg") => {
     const svgData = new XMLSerializer().serializeToString(svgElement);
     const blob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -12,7 +12,8 @@ const downloadSVG = (svgElement, filename = "visualization.svg") => {
     URL.revokeObjectURL(url);
 };
 
-function downloadPNG(svgNode) {
+// CHANGE: Export the download functions to resolve Webpack module confusion.
+export function downloadPNG(svgNode) {
     const svgString = new XMLSerializer().serializeToString(svgNode);
 
     // Fix: Encode SVG with UTF-8 safe method
@@ -44,10 +45,8 @@ function downloadPNG(svgNode) {
 }
 
 
-// const downloadEPS = (svgElement, filename = "visualization.eps") => {
-//     alert("EPS export not implemented yet.");
-// };
-function downloadEPS(svgNode) {
+// CHANGE: Export the download functions to resolve Webpack module confusion.
+export function downloadEPS(svgNode) {
     if (!svgNode) {
         console.error("No SVG found for EPS export.");
         return;
@@ -87,3 +86,5 @@ function downloadEPS(svgNode) {
     a.click();
     URL.revokeObjectURL(url);
 }
+
+export default { downloadSVG, downloadPNG, downloadEPS };
