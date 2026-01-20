@@ -7,7 +7,16 @@ import {
     generateRingStructure,
     generateColorSchemes,
     calculatePointPositions,
-} from "./ModularB";
+} from "./Modularbar";
+
+// import {
+//     CoordinateTransforms,
+//     calculateSectorPointCounts,
+//     calculateProportionalSectorAngles,
+//     generateRingStructure,
+//     generateColorSchemes,
+//     calculatePointPositions,
+// } from "./Modular_normal";
 // import downloadSVG from "./download";
 // import downloadPNG from "./download";
 // import downloadEPS from "./download";
@@ -62,7 +71,7 @@ export function downloadPNG(svgNode) {
 // CHANGE: Export the download functions to resolve Webpack module confusion.
 export function downloadEPS(svgNode) {
     if (!svgNode) {
-        console.error("No SVG found for EPS export.");
+        // console.error("No SVG found for EPS export.");
         return;
     }
 
@@ -167,7 +176,7 @@ const HierarchicalGraph = ({
 
     useEffect(() => {
         if (!isValidData()) {
-            console.error("Invalid data provided:", { jsonData, labelsData });
+            // console.error("Invalid data provided:", { jsonData, labelsData });
             return;
         }
         const cleanup = renderVisualization();
@@ -186,13 +195,6 @@ const HierarchicalGraph = ({
     ]);
 
     const renderVisualization = () => {
-        console.log(
-            "--- Render Visualization --- Strategy:",
-            transformStrategy,
-            "Options:",
-            transformOptions
-        );
-
         const svg = d3.select(graphRef.current);
         svg.selectAll("*").remove();
 
@@ -231,8 +233,8 @@ const HierarchicalGraph = ({
             labelsData
         );
 
-        console.log("Ring Structure:", ringStructure);
-        console.log("Sector Counts:", sectorCounts);
+        // console.log("Ring Structure:", ringStructure);
+        // console.log("Sector Counts:", sectorCounts);
 
         const { getRingColor, getSectorColor } = generateColorSchemes(ringStructure.length);
 
@@ -259,8 +261,8 @@ const HierarchicalGraph = ({
         const pointPositions = {};
         const ringLabels = ringStructure.map((_, i) => String.fromCharCode(65 + i));
 
-        console.log("perfect");
-        console.log(ringStructure.length);
+        // console.log("perfect");
+        // console.log(ringStructure.length);
 
         const maxDepth = ringStructure.length - 1;
         const radiusStep = maxDepth > 0 ? (maxRadius - baseRadius) / maxDepth : 0;
@@ -268,7 +270,7 @@ const HierarchicalGraph = ({
         ringStructure.forEach((ring, index) => {
             // if (!ringVisibility[ring.key]) return;
 
-            console.log(`\n--- Processing Ring ${index} (${ring.key}) ---`);
+            // console.log(`\n--- Processing Ring ${index} (${ring.key}) ---`);
             let innerRadius = 0;
             let outerRadius = 0;
 
@@ -288,9 +290,9 @@ const HierarchicalGraph = ({
             innerRadius = Math.min(innerRadius, maxRadius - 10);
             outerRadius = Math.min(outerRadius, maxRadius);
 
-            console.log(`Ring ${index}: innerRadius=${innerRadius}, outerRadius=${outerRadius}`);
+            // console.log(`Ring ${index}: innerRadius=${innerRadius}, outerRadius=${outerRadius}`);
 
-            console.log("working fine before ring sector render");
+            // console.log("working fine before ring sector render");
             renderRingSectors(
                 g,
                 ring,
@@ -302,16 +304,18 @@ const HierarchicalGraph = ({
                 sectorAngles ? sectorAngles[index] : null,
                 animationEnabled
             );
-            console.log("working fine before label");
+            // console.log("working fine before label");
             let ringLabelText;
             if (transformStrategy === CoordinateTransforms.DECISION_TREE) {
-                console.log("here ringlabel text");
-                console.log(ringStructure.points?.length);
-                ringLabelText = `Depth ${index} (${ring.points?.length || 0} points across ${ring.nodes?.length || 0} nodes)`;
+                // console.log("here ringlabel text");
+                // console.log(ringStructure.points?.length);
+                // ringLabelText = `Depth ${index} (${ring.points?.length || 0} points across ${ring.nodes?.length || 0} nodes)`;
+                ringLabelText = '';
             } else {
-                console.log("this is working why?")
+                // console.log("this is working why?")
                 //  ringLabelText = `${ringLabels[index]} (${ring.points?.length || 0} points)`;
-                ringLabelText = `${ringLabels[index]}`;
+                // ringLabelText = `${ringLabels[index]}`;
+                ringLabelText = '';
 
             }
 
@@ -358,7 +362,7 @@ const HierarchicalGraph = ({
                 ring
             );
 
-            console.log(`Positions calculated for ring ${index}: ${positions.length}`);
+            // console.log(`Positions calculated for ring ${index}: ${positions.length}`);
 
             positions.forEach(
                 ({ point, x, y, sectorIndex, nodeId }, pointIndex) => {
@@ -379,11 +383,6 @@ const HierarchicalGraph = ({
                             sectorIndex,
                             nodeId,
                         });
-                        console.log(
-                            `Stored position for Point_ID ${id} at ring ${index}: x=${x.toFixed(
-                                2
-                            )}, y=${y.toFixed(2)}`
-                        );
                     });
 
                     drawEnhancedPoint(
@@ -425,7 +424,7 @@ const HierarchicalGraph = ({
 
         renderLinearStrips(ringStructure, sectorCounts);
 
-        console.log("=== RENDER VISUALIZATION END ===\n");
+        // console.log("=== RENDER VISUALIZATION END ===\n");
 
         return () => {
             tooltip.remove();
@@ -520,7 +519,7 @@ const HierarchicalGraph = ({
             .attr("class", `ring-${ringIndex}-sectors`);
 
         if (transformStrategy === CoordinateTransforms.RADIAL) {
-            console.log(`Rendering ring ${ringIndex} outline for RADIAL mode`);
+            // console.log(`Rendering ring ${ringIndex} outline for RADIAL mode`);
             const ringPath = sectorsGroup
                 .append("path")
                 .attr(
@@ -589,7 +588,7 @@ const HierarchicalGraph = ({
                     }
                 });
             }
-            console.log("arriving end");
+            // console.log("arriving end");
             return;
         }
 
@@ -707,10 +706,11 @@ const HierarchicalGraph = ({
             .append("circle")
             .attr("cx", x)
             .attr("cy", y)
-            .attr("r", isSelected ? 5 : 5)
+            // HERE FIND POINT RADIUS
+            .attr("r", isSelected ? 5 : 4)
             .attr("fill", isSelected ? "#ff4444" : getLabelColor(pointIds[0]) || "#333")
             .attr("stroke", isSelected ? "#fff" : "#fff")
-            .attr("stroke-width", isSelected ? 2 : 0.25)
+            .attr("stroke-width", isSelected ? 2 : 0.01)
             .style("pointer-events", "visible")
             .style("cursor", "pointer")
             .on("click", () => {
@@ -796,16 +796,16 @@ const HierarchicalGraph = ({
         if (!highlightConnections) return;
 
         const connectionsGroup = g.append("g").attr("class", "connections");
-        console.log(
-            "Drawing connections, pointPositions:",
-            Object.keys(pointPositions).length,
-            "points"
-        );
+        // console.log(
+        //     "Drawing connections, pointPositions:",
+        //     Object.keys(pointPositions).length,
+        //     "points"
+        // );
 
         Object.entries(pointPositions).forEach(([pointId, positions]) => {
             if (positions.length > 1) {
                 const isHighlighted = selectedPoints.has(Number(pointId));
-                console.log(`Connecting point ID ${pointId}, positions: ${positions.length}`);
+                // console.log(`Connecting point ID ${pointId}, positions: ${positions.length}`);
 
                 const sortedPositions = positions.sort((a, b) => a.ringIndex - b.ringIndex);
 
